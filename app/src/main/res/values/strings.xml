@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">WhereAmI</string>
+    <string name="title_activity_map">Map</string>
+    <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
+    <string name="admob_unit_id">ca-app-pub-1459869098528763/3874445882</string>
+</resources>
