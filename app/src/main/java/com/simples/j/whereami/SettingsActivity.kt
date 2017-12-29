@@ -34,6 +34,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupActionBar()
+
         fragmentManager.beginTransaction().replace(android.R.id.content, GeneralPreferenceFragment()).commit()
     }
 
@@ -76,6 +77,13 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             // updated to reflect the new value, per the Android Design
             // guidelines.
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_interval_id)))
+            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
+                if(value is Boolean) {
+                    if(value) activity.startService(Intent(activity, TrackingService::class.java))
+                    else activity.stopService(Intent(activity, TrackingService::class.java))
+                }
+                true
+            }
         }
 
         override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -125,5 +133,6 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                             .getDefaultSharedPreferences(preference.context)
                             .getString(preference.key, ""))
         }
+
     }
 }
