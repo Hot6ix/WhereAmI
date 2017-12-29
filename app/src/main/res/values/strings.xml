@@ -1,6 +1,26 @@
 <resources>
     <string name="app_name">WhereAmI</string>
     <string name="title_activity_map">Map</string>
+    <string name="menu_share">Share</string>
+    <string name="send_to">Send my location to ...</string>
+    <string name="from">from</string>
     <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
     <string name="admob_unit_id">ca-app-pub-1459869098528763/3874445882</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- Example General settings -->
+    <string name="pref_tracking_id">TRACKING</string>
+    <string name="pref_interval_id">INTERVAL</string>
+
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_title_enable_tracking">Enable tracking</string>
+    <string name="pref_description_enable_tracking">App keeps monitoring location and make notification
+    </string>
+
+    <string name="pref_title_intervals">Location update interval</string>
+    <integer name="pref_default_intervals">5000</integer>
+
 </resources>
