@@ -1,20 +1,33 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreference
-        android:defaultValue="true"
-        android:key="@string/pref_tracking_id"
-        android:summary="@string/pref_description_enable_tracking"
-        android:title="@string/pref_title_enable_tracking" />
+    <PreferenceCategory
+        android:title="@string/pref_01_title" >
 
-    <EditTextPreference
-        android:capitalize="words"
-        android:defaultValue="@integer/pref_default_intervals"
-        android:inputType="numberSigned"
-        android:key="@string/pref_interval_id"
-        android:maxLines="1"
-        android:selectAllOnFocus="true"
-        android:singleLine="true"
-        android:title="@string/pref_title_intervals"
-        android:dependency="@string/pref_tracking_id"/>
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/pref_tracking_id"
+            android:summary="@string/pref_description_enable_notification"
+            android:title="@string/pref_title_enable_notification" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="@integer/pref_interval_default"
+            android:inputType="numberSigned"
+            android:key="@string/pref_interval_id"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_interval_title"
+            android:dependency="@string/pref_tracking_id" />
+
+        <ListPreference
+            android:key="@string/pref_tracking_action_id"
+            android:defaultValue="0"
+            android:dialogTitle="@string/pref_notification_action_list_title"
+            android:entries="@array/pref_tracking_action_entries"
+            android:entryValues="@array/pref_tracking_action_values"
+            android:title="@string/pref_notification_action_title"
+            android:dependency="@string/pref_tracking_id" />
+    </PreferenceCategory>
 
 </PreferenceScreen>

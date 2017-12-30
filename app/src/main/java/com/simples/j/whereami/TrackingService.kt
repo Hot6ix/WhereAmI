@@ -1,19 +1,12 @@
 package com.simples.j.whereami
 
-import android.Manifest
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.location.Address
-import android.location.Geocoder
+import android.content.*
 import android.os.IBinder
 import android.preference.PreferenceManager
-import android.support.v4.app.ActivityCompat
 import android.support.v4.app.NotificationCompat
-import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.location.*
 import java.util.*
@@ -21,6 +14,7 @@ import java.util.*
 class TrackingService : Service() {
 
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
+    private lateinit var mFusedLocationSingleton: FusedLocationSingleton
     private lateinit var locationCallback: LocationCallback
     private lateinit var notificationManager: NotificationManager
     private val notificationId = 124097
@@ -39,6 +33,8 @@ class TrackingService : Service() {
         super.onCreate()
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
+        mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
+
         notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
@@ -46,46 +42,18 @@ class TrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
 
-                notificationManager.notify(notificationId, getNotificationBuilder(applicationContext, "test", "${locationResult!!.lastLocation.latitude}, ${locationResult!!.lastLocation.longitude}").build())
+                notificationManager.notify(notificationId, getNotificationBuilder(applicationContext, "test", "${locationResult!!.lastLocation.latitude}, ${locationResult!!.lastLocation.longitude} at ${Calendar.getInstance().time.toString()}").build())
             }
         }
 
-        enableLocationUpdate()
+        mFusedLocationSingleton.enableLocationUpdate(applicationContext, 5000, 5000, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        disableLocationUpdate()
+        mFusedLocationSingleton.disableLocationUpdate(locationCallback)
         notificationManager.cancel(notificationId)
-    }
-
-    private fun enableLocationUpdate() {
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            var locationRequest = LocationRequest()
-            locationRequest.interval = sharedPref.getString(applicationContext.getString(R.string.pref_interval_id), "5000").toLong()
-            locationRequest.fastestInterval = sharedPref.getString(applicationContext.getString(R.string.pref_interval_id), "5000").toLong()
-            locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-
-            mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
-        }
-    }
-
-    private fun disableLocationUpdate() {
-        mFusedLocationClient.removeLocationUpdates(locationCallback)
-    }
-
-    private fun getAddrFromCoordinate(lat: Double, lng: Double): String {
-        var addr = ""
-        var geoCoder = Geocoder(applicationContext, Locale.getDefault())
-        var addresses: List<Address> = geoCoder.getFromLocation(lat, lng, 1)
-        if(addresses.size != null && addresses.isNotEmpty()) {
-            for(i in 0..addresses[0].maxAddressLineIndex) { // 0 = Country
-                addr += addresses[0].getAddressLine(i)
-            }
-        }
-
-        return addr
     }
 
     private fun getNotificationBuilder(context: Context, title: String, content: String): NotificationCompat.Builder {
@@ -94,6 +62,41 @@ class TrackingService : Service() {
                 .setContentTitle(title)
                 .setContentText(content)
 
+        var intent = Intent()
+
+        when (sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0").toInt()) {
+
+            0 -> {
+                // Open app
+                var pIntent = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MapActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
+                notificationBuilder.setContentIntent(pIntent)
+            }
+            1 -> {
+                // Copy to clipboard
+                var broadcastReceiver = object: BroadcastReceiver() {
+                    override fun onReceive(p0: Context?, p1: Intent?) {
+                        var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        var clipData = ClipData.newPlainText("location", content)
+                        clipboardManager.primaryClip = clipData
+
+                        Toast.makeText(context, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                applicationContext.registerReceiver(broadcastReceiver, IntentFilter(packageName+".ACTION_COPY"))
+                var pIntent = PendingIntent.getBroadcast(applicationContext, 0, Intent(packageName + ".ACTION_COPY"), PendingIntent.FLAG_CANCEL_CURRENT)
+                notificationBuilder.setContentIntent(pIntent)
+            }
+            2 -> {
+                // Share
+                intent.action = Intent.ACTION_SEND
+                intent.type = "text/plain"
+                intent.putExtra(Intent.EXTRA_TEXT, content)
+
+                var pIntent = PendingIntent.getActivity(applicationContext, 0, Intent.createChooser(intent, resources.getText(R.string.send_to)), PendingIntent.FLAG_UPDATE_CURRENT)
+                notificationBuilder.setContentIntent(pIntent)
+            }
+
+        }
         return notificationBuilder
     }
 }

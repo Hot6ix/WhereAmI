@@ -76,6 +76,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             // to their values. When their values change, their summaries are
             // updated to reflect the new value, per the Android Design
             // guidelines.
+            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_tracking_action_id)))
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_interval_id)))
             findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
                 if(value is Boolean) {
@@ -101,27 +102,30 @@ class SettingsActivity : AppCompatPreferenceActivity() {
         private val sBindPreferenceSummaryToValueListener = Preference.OnPreferenceChangeListener { preference, value ->
             val stringValue = value.toString()
 
-            preference.summary = stringValue
+            if (preference is ListPreference) {
+                // For list preferences, look up the correct display value in
+                // the preference's 'entries' list.
+                val listPreference = preference
+                val index = listPreference.findIndexOfValue(stringValue)
+
+                // Set the summary to reflect the new value.
+                preference.setSummary(
+                        if (index >= 0)
+                            listPreference.entries[index]
+                        else
+                            null)
+
+            }
+            else {
+                preference.summary = stringValue
+            }
             true
         }
 
-        /**
-         * Helper method to determine if the device has an extra-large screen. For
-         * example, 10" tablets are extra-large.
-         */
         private fun isXLargeTablet(context: Context): Boolean {
             return context.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_XLARGE
         }
 
-        /**
-         * Binds a preference's summary to its value. More specifically, when the
-         * preference's value is changed, its summary (line of text below the
-         * preference title) is updated to reflect the value. The summary is also
-         * immediately updated upon calling this method. The exact display format is
-         * dependent on the type of preference.
-
-         * @see .sBindPreferenceSummaryToValueListener
-         */
         private fun bindPreferenceSummaryToValue(preference: Preference) {
             // Set the listener to watch for value changes.
             preference.onPreferenceChangeListener = sBindPreferenceSummaryToValueListener

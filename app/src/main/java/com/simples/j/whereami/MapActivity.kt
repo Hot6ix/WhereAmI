@@ -1,10 +1,11 @@
 package com.simples.j.whereami
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Address
-import android.location.Geocoder
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
@@ -14,26 +15,28 @@ import android.view.MenuItem
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.location.*
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.tasks.OnSuccessListener
 import kotlinx.android.synthetic.main.activity_map.*
-import java.util.*
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
     private val PERMISSION_REQUEST_CODE = 1
-    private lateinit var mFusedLocationClient: FusedLocationProviderClient
+    private lateinit var mFusedLocationSingleton: FusedLocationSingleton
     private var zoomLevel = 18
     private lateinit var locationCallback: LocationCallback
     private var currentLat = 0.0
     private var currentLng = 0.0
+    private var currentMarker: Marker? = null
 
     private var requestCount = 0
 
@@ -55,7 +58,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         adView.loadAd(AdRequest.Builder().build())
 
         // Location service
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
 
         locationCallback = object: LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
@@ -64,20 +67,27 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 Log.i(applicationContext.packageName, "Read user location")
                 currentLat = locationResult!!.lastLocation.latitude
                 currentLng = locationResult!!.lastLocation.longitude
+
+                var myLocation = LatLng(currentLat, currentLng)
+
+                if(currentMarker != null) currentMarker?.remove()
+                currentMarker = mMap.addMarker(MarkerOptions().position(myLocation).title("Your Location"))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
+
                 address.text = locationResult!!.lastLocation.latitude.toString() + ", " + locationResult!!.lastLocation.longitude.toString() + "\n"
-                address.append(getAddrFromCoordinate(locationResult!!.lastLocation.latitude, locationResult!!.lastLocation.longitude))
+                address.append(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult!!.lastLocation.latitude, locationResult!!.lastLocation.longitude))
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        enableLocationUpdate()
+        mFusedLocationSingleton.enableLocationUpdate(applicationContext, 5000, 5000, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
-    override fun onStop() {
-        super.onStop()
-        disableLocationUpdate()
+    override fun onPause() {
+        super.onPause()
+        mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -87,13 +97,19 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         when (item!!.itemId) {
+            R.id.menu_copy -> {
+                var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                var clipData = ClipData.newPlainText("location", "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
+                clipboardManager.primaryClip = clipData
+                Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
+            }
             R.id.menu_share -> {
 //                var intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:${currentLat},${currentLng}?q=${currentLat},${currentLng}"))
 //                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
                 var intent = Intent()
                 intent.action = Intent.ACTION_SEND
                 intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, "${currentLat}, ${currentLng} \n${getAddrFromCoordinate(currentLat, currentLng)}")
+                intent.putExtra(Intent.EXTRA_TEXT, "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
                 startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
             }
             R.id.menu_settings -> {
@@ -105,7 +121,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        getCurrentLocation()
+
+//        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mMap.isMyLocationEnabled = true
+//        mMap.uiSettings.isMyLocationButtonEnabled = true
+
+        mMap.uiSettings.isZoomControlsEnabled = true
+        mMap.uiSettings.isCompassEnabled = true
+        mMap.uiSettings.isMapToolbarEnabled = true
+        mMap.uiSettings.isIndoorLevelPickerEnabled = true
+        mMap.uiSettings.setAllGesturesEnabled(true)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -115,7 +139,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             PERMISSION_REQUEST_CODE -> {
                 if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission was granted
-                    getCurrentLocation()
+//                    getCurrentLocation()
                 }
                 else {
                     // Permiision denied
@@ -128,47 +152,5 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 return
             }
         }
-    }
-
-    private fun getCurrentLocation() {
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            mFusedLocationClient.lastLocation.addOnSuccessListener(this, OnSuccessListener { location ->
-                if (mMap != null) {
-                    var myLocation = LatLng(location.latitude, location.longitude)
-                    mMap.addMarker(MarkerOptions().position(myLocation).title("Your Location"))
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
-
-                    getAddrFromCoordinate(location.latitude, location.longitude)
-                }
-            })
-        }
-    }
-
-    private fun enableLocationUpdate() {
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            var locationRequest = LocationRequest()
-            locationRequest.interval = 5000
-            locationRequest.fastestInterval = 3000
-            locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-
-            mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
-        }
-    }
-
-    private fun disableLocationUpdate() {
-        mFusedLocationClient.removeLocationUpdates(locationCallback)
-    }
-
-    private fun getAddrFromCoordinate(lat: Double, lng: Double): String {
-        var addr = ""
-        var geoCoder = Geocoder(applicationContext, Locale.getDefault())
-        var addresses: List<Address> = geoCoder.getFromLocation(lat, lng, 1)
-        if(addresses.size != null && addresses.isNotEmpty()) {
-            for(i in 0..addresses[0].maxAddressLineIndex) { // 0 = Country
-                addr += addresses[0].getAddressLine(i)
-            }
-        }
-
-        return addr
     }
 }
