@@ -27,15 +27,17 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_map.*
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
 
     private lateinit var mMap: GoogleMap
     private val PERMISSION_REQUEST_CODE = 1
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
-    private var zoomLevel = 18
     private lateinit var locationCallback: LocationCallback
+
+    private var zoomLevel = 17
     private var currentLat = 0.0
     private var currentLng = 0.0
+    private var interval: Long = 5000
     private var currentMarker: Marker? = null
 
     private var requestCount = 0
@@ -70,19 +72,23 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 var myLocation = LatLng(currentLat, currentLng)
 
-                if(currentMarker != null) currentMarker?.remove()
-                currentMarker = mMap.addMarker(MarkerOptions().position(myLocation).title("Your Location"))
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
+                if(currentMarker != null) {
+                    currentMarker?.remove()
+                }
+                currentMarker = mMap.addMarker(
+                        MarkerOptions().position(myLocation)
+                                .title(locationResult!!.lastLocation.latitude.toString() + ", " + locationResult!!.lastLocation.longitude.toString())
+                                .snippet(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult!!.lastLocation.latitude, locationResult!!.lastLocation.longitude)))
+                currentMarker?.showInfoWindow()
 
-                address.text = locationResult!!.lastLocation.latitude.toString() + ", " + locationResult!!.lastLocation.longitude.toString() + "\n"
-                address.append(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult!!.lastLocation.latitude, locationResult!!.lastLocation.longitude))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        mFusedLocationSingleton.enableLocationUpdate(applicationContext, 5000, 5000, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
+        mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onPause() {
@@ -121,6 +127,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        mMap.setOnInfoWindowClickListener(this)
 
 //        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mMap.isMyLocationEnabled = true
 //        mMap.uiSettings.isMyLocationButtonEnabled = true
@@ -130,6 +137,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.uiSettings.isMapToolbarEnabled = true
         mMap.uiSettings.isIndoorLevelPickerEnabled = true
         mMap.uiSettings.setAllGesturesEnabled(true)
+    }
+
+    override fun onInfoWindowClick(p0: Marker?) {
+        var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        var clipData = ClipData.newPlainText("location", "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
+        clipboardManager.primaryClip = clipData
+        Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

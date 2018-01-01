@@ -9,17 +9,6 @@
             android:summary="@string/pref_description_enable_notification"
             android:title="@string/pref_title_enable_notification" />
 
-        <EditTextPreference
-            android:capitalize="words"
-            android:defaultValue="@integer/pref_interval_default"
-            android:inputType="numberSigned"
-            android:key="@string/pref_interval_id"
-            android:maxLines="1"
-            android:selectAllOnFocus="true"
-            android:singleLine="true"
-            android:title="@string/pref_interval_title"
-            android:dependency="@string/pref_tracking_id" />
-
         <ListPreference
             android:key="@string/pref_tracking_action_id"
             android:defaultValue="0"
@@ -28,6 +17,16 @@
             android:entryValues="@array/pref_tracking_action_values"
             android:title="@string/pref_notification_action_title"
             android:dependency="@string/pref_tracking_id" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_02_title" >
+
+        <Preference
+            android:key="@string/pref_about_id"
+            android:title="@string/pref_about_title" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

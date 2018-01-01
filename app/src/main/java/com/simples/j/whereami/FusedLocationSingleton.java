@@ -62,14 +62,14 @@ public class FusedLocationSingleton {
 
     public String getAddrFromCoordinate(Context context, double lat, double lng) {
 
-        String addr = "";
+        StringBuilder builder = new StringBuilder();
         try{
             Geocoder coder = new Geocoder(context, Locale.getDefault());
             List<Address> addresses = coder.getFromLocation(lat, lng, 1);
             if(addresses != null) {
                 if(addresses.size() > 0) {
-                    for(int i = 0; i < addresses.get(0).getMaxAddressLineIndex(); i++) {
-                        addr += addresses.get(0).getAddressLine(i);
+                    for(int i = 0; i <= addresses.get(0).getMaxAddressLineIndex(); i++) {
+                        builder.append(addresses.get(0).getAddressLine(i));
                     }
                 }
             }
@@ -78,6 +78,6 @@ public class FusedLocationSingleton {
         catch (IOException e) {
             e.printStackTrace();
         }
-        return addr;
+        return builder.toString();
     }
 }

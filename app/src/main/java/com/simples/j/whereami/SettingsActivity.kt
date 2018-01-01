@@ -4,20 +4,10 @@ import android.annotation.TargetApi
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.preference.ListPreference
-import android.preference.Preference
-import android.preference.PreferenceActivity
-import android.preference.PreferenceFragment
-import android.preference.PreferenceManager
-import android.preference.RingtonePreference
-import android.text.TextUtils
-import android.util.Log
+import android.preference.*
 import android.view.MenuItem
-import android.widget.Toast
 
 /**
  * A [PreferenceActivity] that presents a set of application settings. On
@@ -77,7 +67,6 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             // updated to reflect the new value, per the Android Design
             // guidelines.
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_tracking_action_id)))
-            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_interval_id)))
             findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
                 if(value is Boolean) {
                     if(value) activity.startService(Intent(activity, TrackingService::class.java))
@@ -85,12 +74,17 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 }
                 true
             }
+            findPreference(resources.getString(R.string.pref_tracking_action_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
+                activity.stopService(Intent(activity, TrackingService::class.java))
+                activity.startService(Intent(activity, TrackingService::class.java))
+                true
+            }
         }
 
         override fun onOptionsItemSelected(item: MenuItem): Boolean {
             val id = item.itemId
             if (id == android.R.id.home) {
-                startActivity(Intent(activity, SettingsActivity::class.java))
+                activity.finish()
                 return true
             }
             return super.onOptionsItemSelected(item)

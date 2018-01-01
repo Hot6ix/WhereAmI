@@ -7,6 +7,7 @@ import android.content.*
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.support.v4.app.NotificationCompat
+import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.location.*
 import java.util.*
@@ -18,6 +19,9 @@ class TrackingService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var notificationManager: NotificationManager
     private val notificationId = 124097
+    private val contentId = 234798
+    private var interval: Long = 5000
+    private val receiverAction = ".ACTION_COPY"
     private lateinit var sharedPref: SharedPreferences
 
     override fun onBind(intent: Intent): IBinder? {
@@ -46,7 +50,21 @@ class TrackingService : Service() {
             }
         }
 
-        mFusedLocationSingleton.enableLocationUpdate(applicationContext, 5000, 5000, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
+        val broadcastReceiver = object: BroadcastReceiver() {
+            override fun onReceive(p0: Context?, p1: Intent?) {
+                if(p1 != null) {
+                    val clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clipData = ClipData.newPlainText("location", p1.extras.getString(contentId.toString()))
+                    clipboardManager.primaryClip = clipData
+                }
+
+                Toast.makeText(applicationContext, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
+            }
+        }
+        applicationContext.registerReceiver(broadcastReceiver, IntentFilter(packageName + receiverAction))
+
+        Log.i(packageName, "Enable location update ( interval : " + interval + ", Action : " + sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0") + " )")
+        mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onDestroy() {
@@ -73,17 +91,9 @@ class TrackingService : Service() {
             }
             1 -> {
                 // Copy to clipboard
-                var broadcastReceiver = object: BroadcastReceiver() {
-                    override fun onReceive(p0: Context?, p1: Intent?) {
-                        var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        var clipData = ClipData.newPlainText("location", content)
-                        clipboardManager.primaryClip = clipData
-
-                        Toast.makeText(context, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
-                    }
-                }
-                applicationContext.registerReceiver(broadcastReceiver, IntentFilter(packageName+".ACTION_COPY"))
-                var pIntent = PendingIntent.getBroadcast(applicationContext, 0, Intent(packageName + ".ACTION_COPY"), PendingIntent.FLAG_CANCEL_CURRENT)
+                intent = Intent(packageName + receiverAction)
+                intent.putExtra(contentId.toString(), content)
+                var pIntent = PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
                 notificationBuilder.setContentIntent(pIntent)
             }
             2 -> {
