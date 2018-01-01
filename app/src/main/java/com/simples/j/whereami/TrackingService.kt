@@ -46,7 +46,7 @@ class TrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
 
-                notificationManager.notify(notificationId, getNotificationBuilder(applicationContext, "test", "${locationResult!!.lastLocation.latitude}, ${locationResult!!.lastLocation.longitude} at ${Calendar.getInstance().time.toString()}").build())
+                notificationManager.notify(notificationId, getNotificationBuilder(applicationContext, "test", "${locationResult!!.lastLocation.latitude}, ${locationResult.lastLocation.longitude} at ${Calendar.getInstance().time.toString()}").build())
             }
         }
 
@@ -75,7 +75,7 @@ class TrackingService : Service() {
     }
 
     private fun getNotificationBuilder(context: Context, title: String, content: String): NotificationCompat.Builder {
-        var notificationBuilder = NotificationCompat.Builder(context, context.packageName)
+        val notificationBuilder = NotificationCompat.Builder(context, context.packageName)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentTitle(title)
                 .setContentText(content)
@@ -86,14 +86,14 @@ class TrackingService : Service() {
 
             0 -> {
                 // Open app
-                var pIntent = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MapActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
+                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MapActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
                 notificationBuilder.setContentIntent(pIntent)
             }
             1 -> {
                 // Copy to clipboard
                 intent = Intent(packageName + receiverAction)
                 intent.putExtra(contentId.toString(), content)
-                var pIntent = PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+                val pIntent = PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
                 notificationBuilder.setContentIntent(pIntent)
             }
             2 -> {
@@ -102,7 +102,7 @@ class TrackingService : Service() {
                 intent.type = "text/plain"
                 intent.putExtra(Intent.EXTRA_TEXT, content)
 
-                var pIntent = PendingIntent.getActivity(applicationContext, 0, Intent.createChooser(intent, resources.getText(R.string.send_to)), PendingIntent.FLAG_UPDATE_CURRENT)
+                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent.createChooser(intent, resources.getText(R.string.send_to)), PendingIntent.FLAG_UPDATE_CURRENT)
                 notificationBuilder.setContentIntent(pIntent)
             }
 

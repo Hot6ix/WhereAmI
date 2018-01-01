@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:tools="http://schemas.android.com/tools"
+<menu
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
         android:id="@+id/menu_copy"
-        android:icon="@android:drawable/btn_plus"
+        android:icon="@android:drawable/ic_menu_send"
         android:title="@string/menu_copy"
         app:showAsAction="ifRoom" />
     <item

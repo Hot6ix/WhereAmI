@@ -6,6 +6,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.*
+import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
@@ -22,25 +24,31 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_map.*
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
+private const val PERMISSION_REQUEST_CODE = 1
+
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, SensorEventListener {
 
     private lateinit var mMap: GoogleMap
-    private val PERMISSION_REQUEST_CODE = 1
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
     private lateinit var locationCallback: LocationCallback
+    private lateinit var mClipboardManager: ClipboardManager
+    private lateinit var mSensorManager: SensorManager
+    private lateinit var mSensor: Sensor
 
     private var zoomLevel = 17
-    private var currentLat = 0.0
-    private var currentLng = 0.0
-    private var interval: Long = 5000
+    private var currentLocation: Location? = null
+    private var interval: Long = 3000
     private var currentMarker: Marker? = null
 
     private var requestCount = 0
+
+    var mRotationMatrix = FloatArray(16)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +67,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
         MobileAds.initialize(this, applicationContext.getString(R.string.admob_app_id))
         adView.loadAd(AdRequest.Builder().build())
 
+        // Get services
+        mClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        mSensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+
         // Location service
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
 
@@ -67,32 +80,37 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
                 super.onLocationResult(locationResult)
 
                 Log.i(applicationContext.packageName, "Read user location")
-                currentLat = locationResult!!.lastLocation.latitude
-                currentLng = locationResult!!.lastLocation.longitude
 
-                var myLocation = LatLng(currentLat, currentLng)
+                /* Location
+                *   - Latitude, Longitude, Altitude
+                *   - Bearing, Speed, Time */
+                currentLocation = locationResult!!.lastLocation
+
+                val myLocation = LatLng(locationResult!!.lastLocation.latitude, locationResult.lastLocation.longitude)
 
                 if(currentMarker != null) {
                     currentMarker?.remove()
                 }
                 currentMarker = mMap.addMarker(
                         MarkerOptions().position(myLocation)
-                                .title(locationResult!!.lastLocation.latitude.toString() + ", " + locationResult!!.lastLocation.longitude.toString())
-                                .snippet(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult!!.lastLocation.latitude, locationResult!!.lastLocation.longitude)))
+                                .title(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)))
                 currentMarker?.showInfoWindow()
 
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
+//                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
+//                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition(myLocation, zoomLevel.toFloat(), 0f, locationResult.lastLocation.bearing)))
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
+        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_STATUS_ACCURACY_LOW)
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onPause() {
         super.onPause()
+        mSensorManager.unregisterListener(this)
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
@@ -104,18 +122,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         when (item!!.itemId) {
             R.id.menu_copy -> {
-                var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                var clipData = ClipData.newPlainText("location", "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
-                clipboardManager.primaryClip = clipData
+                val clipData = ClipData.newPlainText("location", "${currentLocation!!.latitude}, ${currentLocation!!.longitude} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLocation!!.latitude, currentLocation!!.longitude)}")
+                mClipboardManager.primaryClip = clipData
                 Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
             }
             R.id.menu_share -> {
 //                var intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:${currentLat},${currentLng}?q=${currentLat},${currentLng}"))
 //                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
-                var intent = Intent()
+                val intent = Intent()
                 intent.action = Intent.ACTION_SEND
                 intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
+                intent.putExtra(Intent.EXTRA_TEXT, "${currentLocation!!.latitude}, ${currentLocation!!.longitude} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLocation!!.latitude, currentLocation!!.longitude)}")
                 startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
             }
             R.id.menu_settings -> {
@@ -128,10 +145,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.setOnInfoWindowClickListener(this)
-
-//        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mMap.isMyLocationEnabled = true
-//        mMap.uiSettings.isMyLocationButtonEnabled = true
-
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.uiSettings.isCompassEnabled = true
         mMap.uiSettings.isMapToolbarEnabled = true
@@ -140,10 +153,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
     }
 
     override fun onInfoWindowClick(p0: Marker?) {
-        var clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        var clipData = ClipData.newPlainText("location", "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
-        clipboardManager.primaryClip = clipData
-        Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
+//        val clipData = ClipData.newPlainText("location", "${currentLat}, ${currentLng} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLat, currentLng)}")
+//        clipboardManager.primaryClip = clipData
+//        Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -151,10 +163,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
 
         when(requestCode) {
             PERMISSION_REQUEST_CODE -> {
-                if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission was granted
-//                    getCurrentLocation()
-                }
+                if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) { }
                 else {
                     // Permiision denied
                     if(requestCount < 2) {
@@ -164,6 +173,26 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
                     else Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
                 }
                 return
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) { }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if(event!!.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+
+            SensorManager.getRotationMatrixFromVector(mRotationMatrix, event.values)
+            val orientation = FloatArray(3)
+            SensorManager.getOrientation(mRotationMatrix, orientation)
+            if(currentLocation != null) {
+                val bearing = Math.toDegrees(orientation[0].toDouble()) +  GeomagneticField(currentLocation!!.latitude.toFloat(), currentLocation!!.longitude.toFloat(), currentLocation!!.altitude.toFloat(), System.currentTimeMillis()).declination
+                var cam = CameraPosition.builder()
+                        .target(LatLng(currentLocation!!.latitude, currentLocation!!.longitude))
+                        .zoom(zoomLevel.toFloat())
+                        .bearing(bearing.toFloat())
+                        .build()
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cam))
             }
         }
     }
