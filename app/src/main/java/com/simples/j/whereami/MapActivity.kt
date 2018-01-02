@@ -24,10 +24,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_map.*
 
 private const val PERMISSION_REQUEST_CODE = 1
@@ -41,7 +38,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
     private lateinit var mSensorManager: SensorManager
     private lateinit var mSensor: Sensor
 
-    private var zoomLevel = 17
+    private var zoomLevel = 16
     private var currentLocation: Location? = null
     private var interval: Long = 3000
     private var currentMarker: Marker? = null
@@ -88,29 +85,28 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
 
                 val myLocation = LatLng(locationResult!!.lastLocation.latitude, locationResult.lastLocation.longitude)
 
-                if(currentMarker != null) {
-                    currentMarker?.remove()
-                }
-                currentMarker = mMap.addMarker(
-                        MarkerOptions().position(myLocation)
-                                .title(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)))
-                currentMarker?.showInfoWindow()
+//                if(currentMarker != null) {
+//                    currentMarker?.remove()
+//                }
+//                currentMarker = mMap.addMarker(
+//                        MarkerOptions().position(myLocation)
+//                                .title(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)))
+//                currentMarker?.showInfoWindow()
 
 //                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
-//                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition(myLocation, zoomLevel.toFloat(), 0f, locationResult.lastLocation.bearing)))
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_STATUS_ACCURACY_LOW)
+//        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_STATUS_ACCURACY_LOW)
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onPause() {
         super.onPause()
-        mSensorManager.unregisterListener(this)
+//        mSensorManager.unregisterListener(this)
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
@@ -150,6 +146,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
         mMap.uiSettings.isMapToolbarEnabled = true
         mMap.uiSettings.isIndoorLevelPickerEnabled = true
         mMap.uiSettings.setAllGesturesEnabled(true)
+
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mMap.isMyLocationEnabled = true
     }
 
     override fun onInfoWindowClick(p0: Marker?) {
@@ -192,7 +190,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
                         .zoom(zoomLevel.toFloat())
                         .bearing(bearing.toFloat())
                         .build()
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cam))
+
+                mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cam))
             }
         }
     }
