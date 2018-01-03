@@ -10,10 +10,12 @@ import android.hardware.*
 import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.MobileAds
@@ -29,7 +31,7 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, SensorEventListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, GoogleMap.OnMapClickListener, GoogleMap.OnCameraIdleListener, SensorEventListener, View.OnClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
@@ -38,14 +40,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
     private lateinit var mSensorManager: SensorManager
     private lateinit var mSensor: Sensor
 
-    private var zoomLevel = 16
+    private var zoomLevel: Float = 17.0f
     private var currentLocation: Location? = null
-    private var interval: Long = 3000
+    private var interval: Long = 1000
     private var currentMarker: Marker? = null
+    private var isFirstScanned = false
 
     private var requestCount = 0
+    private var locationStack = 0
 
-    var mRotationMatrix = FloatArray(16)
+    private var mRotationMatrix = FloatArray(16)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,31 +87,33 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
                 *   - Bearing, Speed, Time */
                 currentLocation = locationResult!!.lastLocation
 
-                val myLocation = LatLng(locationResult!!.lastLocation.latitude, locationResult.lastLocation.longitude)
+                val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
 
-//                if(currentMarker != null) {
-//                    currentMarker?.remove()
-//                }
-//                currentMarker = mMap.addMarker(
-//                        MarkerOptions().position(myLocation)
-//                                .title(mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)))
-//                currentMarker?.showInfoWindow()
+                if(currentMarker != null) currentMarker?.remove()
 
-//                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel.toFloat()))
+                if(!isFirstScanned) {
+                    var cam = CameraPosition.builder()
+                            .target(LatLng(currentLocation!!.latitude, currentLocation!!.longitude))
+                            .zoom(zoomLevel)
+                            .bearing(0.toFloat())
+                            .build()
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cam))
+                    isFirstScanned = true
+                }
             }
         }
+
+        myLocation.setOnClickListener(this)
     }
 
     override fun onResume() {
         super.onResume()
-//        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_STATUS_ACCURACY_LOW)
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
     override fun onPause() {
         super.onPause()
-//        mSensorManager.unregisterListener(this)
-        mFusedLocationSingleton.disableLocationUpdate(locationCallback)
+        disableAllListener()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -123,8 +129,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
                 Toast.makeText(this, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
             }
             R.id.menu_share -> {
-//                var intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:${currentLat},${currentLng}?q=${currentLat},${currentLng}"))
-//                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
                 val intent = Intent()
                 intent.action = Intent.ACTION_SEND
                 intent.type = "text/plain"
@@ -140,6 +144,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        mMap.setOnCameraIdleListener(this)
+        mMap.setOnMapClickListener(this)
         mMap.setOnInfoWindowClickListener(this)
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.uiSettings.isCompassEnabled = true
@@ -148,6 +154,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
         mMap.uiSettings.setAllGesturesEnabled(true)
 
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mMap.isMyLocationEnabled = true
+    }
+
+    override fun onMapClick(point: LatLng?) {
+        mSensorManager.unregisterListener(this)
+    }
+
+    override fun onCameraIdle() {
+        zoomLevel = mMap.cameraPosition.zoom
     }
 
     override fun onInfoWindowClick(p0: Marker?) {
@@ -185,14 +199,32 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnInfoWin
             SensorManager.getOrientation(mRotationMatrix, orientation)
             if(currentLocation != null) {
                 val bearing = Math.toDegrees(orientation[0].toDouble()) +  GeomagneticField(currentLocation!!.latitude.toFloat(), currentLocation!!.longitude.toFloat(), currentLocation!!.altitude.toFloat(), System.currentTimeMillis()).declination
-                var cam = CameraPosition.builder()
+                val cam = CameraPosition.builder()
                         .target(LatLng(currentLocation!!.latitude, currentLocation!!.longitude))
-                        .zoom(zoomLevel.toFloat())
+                        .zoom(zoomLevel)
                         .bearing(bearing.toFloat())
                         .build()
 
                 mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cam))
             }
         }
+    }
+
+    override fun onClick(view: View?) {
+        when (view!!.id) {
+            R.id.myLocation -> {
+                if(myLocation.isChecked) {
+                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_STATUS_ACCURACY_LOW)
+                }
+                else {
+                    mSensorManager.unregisterListener(this)
+                }
+            }
+        }
+    }
+
+    private fun disableAllListener() {
+        mFusedLocationSingleton.disableLocationUpdate(locationCallback)
+        mSensorManager.unregisterListener(this)
     }
 }

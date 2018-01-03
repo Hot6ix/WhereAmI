@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">WhereAmI</string>
     <string name="title_activity_map">Map</string>
+    <string name="menu_mylocatoin">My location</string>
     <string name="menu_share">Share</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_copy">Copy to Clipboard</string>
