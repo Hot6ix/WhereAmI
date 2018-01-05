@@ -13,6 +13,7 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
@@ -64,12 +65,12 @@ public class FusedLocationSingleton {
         mFusedLocationClient.removeLocationUpdates(callback);
     }
 
-    public String getAddrFromCoordinate(Context context, double lat, double lng) {
+    public String getAddrFromCoordinate(Context context, LatLng latlng) {
 
         StringBuilder builder = new StringBuilder();
         try{
             Geocoder coder = new Geocoder(context, Locale.getDefault());
-            List<Address> addresses = coder.getFromLocation(lat, lng, 1);
+            List<Address> addresses = coder.getFromLocation(latlng.latitude, latlng.longitude, 1);
             if(addresses != null) {
                 if(addresses.size() > 0) {
                     for(int i = 0; i <= addresses.get(0).getMaxAddressLineIndex(); i++) {
@@ -77,7 +78,6 @@ public class FusedLocationSingleton {
                     }
                 }
             }
-
         }
         catch (IOException e) {
             e.printStackTrace();

@@ -78,6 +78,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if(!isFirstScanned || isMyLocationEnabled) {
                         animateCamera(myLocation, zoomLevel, 0.toFloat())
                         mMap.addMarker(MarkerOptions().title("sefssefew").snippet("efwefwew").position(myLocation))
+                        address.text = mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, myLocation)
                         isFirstScanned = true
                     }
                 }
