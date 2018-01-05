@@ -7,6 +7,8 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.preference.*
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.view.MenuItem
 
 /**
@@ -74,11 +76,6 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 }
                 true
             }
-            findPreference(resources.getString(R.string.pref_tracking_action_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
-                activity.stopService(Intent(activity, TrackingService::class.java))
-                activity.startService(Intent(activity, TrackingService::class.java))
-                true
-            }
         }
 
         override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -88,6 +85,18 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 return true
             }
             return super.onOptionsItemSelected(item)
+        }
+
+        private fun bindPreferenceSummaryToValue(preference: Preference) {
+            // Set the listener to watch for value changes.
+            preference.onPreferenceChangeListener = sBindPreferenceSummaryToValueListener
+
+            // Trigger the listener immediately with the preference's
+            // current value.
+            sBindPreferenceSummaryToValueListener.onPreferenceChange(preference,
+                    PreferenceManager
+                            .getDefaultSharedPreferences(preference.context)
+                            .getString(preference.key, ""))
         }
     }
 
@@ -103,11 +112,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 val index = listPreference.findIndexOfValue(stringValue)
 
                 // Set the summary to reflect the new value.
-                preference.setSummary(
-                        if (index >= 0)
-                            listPreference.entries[index]
-                        else
-                            null)
+                preference.summary = listPreference.entries[index]
 
             }
             else {
@@ -118,18 +123,6 @@ class SettingsActivity : AppCompatPreferenceActivity() {
 
         private fun isXLargeTablet(context: Context): Boolean {
             return context.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_XLARGE
-        }
-
-        private fun bindPreferenceSummaryToValue(preference: Preference) {
-            // Set the listener to watch for value changes.
-            preference.onPreferenceChangeListener = sBindPreferenceSummaryToValueListener
-
-            // Trigger the listener immediately with the preference's
-            // current value.
-            sBindPreferenceSummaryToValueListener.onPreferenceChange(preference,
-                    PreferenceManager
-                            .getDefaultSharedPreferences(preference.context)
-                            .getString(preference.key, ""))
         }
 
     }

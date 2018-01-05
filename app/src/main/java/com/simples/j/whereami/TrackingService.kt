@@ -3,12 +3,13 @@ package com.simples.j.whereami
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.*
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.support.v4.app.NotificationCompat
 import android.util.Log
-import android.widget.Toast
 import com.google.android.gms.location.*
 import java.util.*
 
@@ -25,7 +26,6 @@ class TrackingService : Service() {
     private lateinit var sharedPref: SharedPreferences
 
     override fun onBind(intent: Intent): IBinder? {
-        // TODO: Return the communication channel to the service.
         throw UnsupportedOperationException("Not yet implemented")
     }
 
@@ -49,19 +49,6 @@ class TrackingService : Service() {
                 notificationManager.notify(notificationId, getNotificationBuilder(applicationContext, "test", "${locationResult!!.lastLocation.latitude}, ${locationResult.lastLocation.longitude} at ${Calendar.getInstance().time.toString()}").build())
             }
         }
-
-        val broadcastReceiver = object: BroadcastReceiver() {
-            override fun onReceive(p0: Context?, p1: Intent?) {
-                if(p1 != null) {
-                    val clipboardManager: ClipboardManager = applicationContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clipData = ClipData.newPlainText("location", p1.extras.getString(contentId.toString()))
-                    clipboardManager.primaryClip = clipData
-                }
-
-                Toast.makeText(applicationContext, getString(R.string.copy_message), Toast.LENGTH_SHORT).show()
-            }
-        }
-        applicationContext.registerReceiver(broadcastReceiver, IntentFilter(packageName + receiverAction))
 
         Log.i(packageName, "Enable location update ( interval : " + interval + ", Action : " + sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0") + " )")
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
@@ -90,13 +77,6 @@ class TrackingService : Service() {
                 notificationBuilder.setContentIntent(pIntent)
             }
             1 -> {
-                // Copy to clipboard
-                intent = Intent(packageName + receiverAction)
-                intent.putExtra(contentId.toString(), content)
-                val pIntent = PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
-                notificationBuilder.setContentIntent(pIntent)
-            }
-            2 -> {
                 // Share
                 intent.action = Intent.ACTION_SEND
                 intent.type = "text/plain"

@@ -1,13 +1,5 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <MultiSelectListPreference
-        android:key="@string/pref_clipboard_option_id"
-        android:defaultValue="@array/pref_clipboard_option_values"
-        android:dialogTitle="@string/pref_clipboard_option_list_title"
-        android:entries="@array/pref_clipboard_option_entries"
-        android:entryValues="@array/pref_clipboard_option_values"
-        android:title="@string/pref_clipboard_option_title" />
-
+s
     <MultiSelectListPreference
         android:key="@string/pref_share_option_id"
         android:defaultValue="@array/pref_share_option_values_default"

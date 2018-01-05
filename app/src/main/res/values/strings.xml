@@ -4,8 +4,6 @@
     <string name="menu_mylocatoin">My location</string>
     <string name="menu_share">Share</string>
     <string name="menu_settings">Settings</string>
-    <string name="menu_copy">Copy to Clipboard</string>
-    <string name="copy_message">Copied to clipboard</string>
     <string name="send_to">Send my location to &#8230;</string>
     <string name="from">from</string>
     <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
@@ -16,23 +14,6 @@
     <string name="pref_00_title">General</string>
     <string name="pref_01_title">Notification</string>
     <string name="pref_02_title">Others</string>
-
-    <!-- Clipboard Settings -->
-    <string name="pref_clipboard_option_id">CLIPBOARD</string>
-
-    <string name="pref_clipboard_option_title">Clipboard option</string>
-    <string name="pref_clipboard_option_list_title">Clipboard option</string>
-
-    <string-array name="pref_clipboard_option_entries">
-        <item>Addres</item>
-        <item>Coordinate</item>
-        <item>Date</item>
-    </string-array>
-    <string-array name="pref_clipboard_option_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
 
     <!-- Share Settings -->
     <string name="pref_share_option_id">SHARE</string>
@@ -68,13 +49,11 @@
 
     <string-array name="pref_tracking_action_entries">
         <item>Open app</item>
-        <item>Copy to clipboard</item>
         <item>Share</item>
     </string-array>
     <string-array name="pref_tracking_action_values">
         <item>0</item>
         <item>1</item>
-        <item>2</item>
     </string-array>
 
     <!-- etc -->
@@ -82,5 +61,9 @@
     <string name="pref_about_title">About</string>
 
     <string name="pref_about_id">ABOUT</string>
+
+    <string name="title_activity_fullscreen">FullscreenActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
 
 </resources>
