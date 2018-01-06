@@ -15,7 +15,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 
 import java.io.IOException;
 import java.util.List;
@@ -65,8 +64,9 @@ public class FusedLocationSingleton {
         mFusedLocationClient.removeLocationUpdates(callback);
     }
 
-    public String getAddrFromCoordinate(Context context, LatLng latlng) {
+    public String getAddressFromCoordinate(Context context, LatLng latlng) {
 
+        // 0 : Full address, 1 : Address without country
         StringBuilder builder = new StringBuilder();
         try{
             Geocoder coder = new Geocoder(context, Locale.getDefault());
