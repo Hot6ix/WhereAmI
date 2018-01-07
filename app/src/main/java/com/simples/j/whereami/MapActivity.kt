@@ -1,6 +1,7 @@
 package com.simples.j.whereami
 
 import android.Manifest
+import android.app.ActivityOptions
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.ColorFilter
@@ -8,6 +9,8 @@ import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
+import android.support.v4.app.ActivityOptionsCompat
+import android.support.v4.view.ViewCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
@@ -31,6 +34,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_map.*
+import kotlinx.android.synthetic.main.content_detail.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
@@ -67,6 +71,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
         infoView.post { infoViewWidth = infoView.measuredWidth }
         myLocation.setOnClickListener(this)
+        setting.setOnClickListener(this)
+        address.setOnClickListener(this)
         setMyLocationButtonImage()
 
         // Ad
@@ -93,7 +99,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         animateCamera(myLocation, zoomLevel, 0.toFloat())
 
                         if(currentMarker == null) {
-                            currentMarker = mMap.addMarker(MarkerOptions().title("sefssefew").snippet("efwefwew").position(myLocation))
+                            currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
                         }
                         currentMarker!!.position = myLocation
                         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, myLocation)
@@ -106,15 +112,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onResume() {
         super.onResume()
-    }
-
-    override fun onStart() {
-        super.onStart()
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
-    override fun onStop() {
-        super.onStop()
+    override fun onPause() {
+        super.onPause()
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
@@ -144,13 +146,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap = googleMap
         mMap.setOnCameraIdleListener(this)
         mMap.setOnCameraMoveStartedListener(this)
-        mMap.uiSettings.isCompassEnabled = true
-        mMap.uiSettings.isZoomControlsEnabled = true
-        mMap.uiSettings.isMapToolbarEnabled = true
-        mMap.uiSettings.isIndoorLevelPickerEnabled = true
         mMap.uiSettings.setAllGesturesEnabled(true)
-        mMap.setInfoWindowAdapter(InfoWindow(applicationContext))
-        mMap.setPadding(0, 60, 0, 330)
+        mMap.setPadding(0, 80, 0, 330)
 
 //        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 //            mMap.isMyLocationEnabled = true
@@ -177,13 +174,33 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(view != null) {
             when (view.id) {
                 R.id.myLocation -> {
-                    myLocation.isSelected = !myLocation.isSelected
-                    isMyLocationEnabled = !isMyLocationEnabled
-                    if(isMyLocationEnabled) {
-                        if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
-                        setLastLocation()
-                        if(isInfoViewCollapsed) expandInfoView()
+                    if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
                     }
+                    else {
+                        myLocation.isSelected = !myLocation.isSelected
+                        isMyLocationEnabled = !isMyLocationEnabled
+                        setMyLocationButtonImage()
+                        if(isMyLocationEnabled) {
+                            if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
+                            setLastLocation()
+                            if(isInfoViewCollapsed) expandInfoView()
+                        }
+                    }
+                }
+                R.id.setting -> {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                }
+                R.id.address -> {
+//                    val intent = Intent()
+//                    intent.action = Intent.ACTION_SEND
+//                    intent.type = "text/plain"
+//                    intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
+//                    startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
+                    var intent = Intent(this, DetailActivity::class.java)
+                    intent.putExtra("addr", mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
+                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, address, ViewCompat.getTransitionName(address))
+                    startActivity(intent, options.toBundle())
                 }
             }
         }
@@ -194,7 +211,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         when(requestCode) {
             PERMISSION_REQUEST_CODE -> {
-                if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) { }
+                if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
+                    mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
+                }
                 else {
                     // Permiision denied
                     if(requestCount < 2) {
@@ -257,7 +277,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     private fun setMyLocationButtonImage() {
-        if(isMyLocationEnabled) myLocation.isSelected = true
-        else myLocation.isSelected = false
+        if(isMyLocationEnabled) {
+            myLocation.isSelected = true
+            myLocation.setImageDrawable(getDrawable(R.drawable.ic_menu_mylocation_light))
+        }
+        else {
+            myLocation.isSelected = false
+            myLocation.setImageDrawable(getDrawable(R.drawable.ic_menu_mylocation_dark))
+        }
     }
 }
