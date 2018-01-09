@@ -5,18 +5,19 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.ActivityOptionsCompat
 import android.support.v4.util.Pair
 import android.support.v4.view.ViewCompat
 import android.support.v7.app.AppCompatActivity
+import android.transition.AutoTransition
+import android.transition.TransitionManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import android.view.animation.Transformation
+import android.view.animation.*
 import android.widget.RelativeLayout
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
@@ -36,6 +37,7 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
+private const val ADDRESS_ANIM_DURATION: Long = 1000
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, View.OnClickListener {
 
@@ -51,6 +53,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isMyLocationEnabled = true
     private var isCameraMoving = false
     private var isInfoViewCollapsed = false
+    private var isMoreViewCollapsed = true
     private var infoViewWidth = 0
 
     private var requestCount = 0
@@ -68,8 +71,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
         }
         infoView.post { infoViewWidth = infoView.measuredWidth }
+
         myLocation.setOnClickListener(this)
-        more.setOnClickListener(this)
+        item_more.setOnClickListener(this)
         address.setOnClickListener(this)
         setMyLocationButtonImage()
 
@@ -181,8 +185,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         }
                     }
                 }
-                R.id.more -> {
-                    startActivity(Intent(this, SettingsActivity::class.java))
+                R.id.item_more -> {
+                    val constraintSet = ConstraintSet()
+                    constraintSet.clone(menu_layout)
+                    if(isMoreViewCollapsed) {
+                        // Set share
+                        constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 20)
+
+                        // Set setting
+                        constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 20)
+                    }
+                    else {
+                        // Set share
+                        constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.BOTTOM)
+                        // Set setting
+                        constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.BOTTOM)
+                    }
+                    val transition = AutoTransition()
+                    transition.duration = 300
+                    transition.interpolator = AccelerateDecelerateInterpolator()
+
+                    TransitionManager.beginDelayedTransition(menu_layout, transition)
+                    constraintSet.applyTo(menu_layout)
+
+                    isMoreViewCollapsed = !isMoreViewCollapsed
                 }
                 R.id.address -> {
 //                    val intent = Intent()
@@ -196,9 +222,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 //                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
 //                            Pair<View, String>(address, ViewCompat.getTransitionName(address)))
 //                    startActivity(intent, options.toBundle())
-                }
-                R.id.more -> {
-                    item_share.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.sub_menu_show))
                 }
             }
         }
@@ -253,7 +276,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 infoView.requestLayout()
             }
         }
-        anim.duration = 1000
+        anim.duration = ADDRESS_ANIM_DURATION
         infoView.startAnimation(anim)
         isInfoViewCollapsed = true
         setMyLocationButtonImage()
@@ -268,7 +291,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 infoView.requestLayout()
             }
         }
-        anim.duration = 1000
+        anim.duration = ADDRESS_ANIM_DURATION
         infoView.startAnimation(anim)
         isInfoViewCollapsed = false
         setMyLocationButtonImage()
