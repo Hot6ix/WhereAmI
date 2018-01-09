@@ -1,15 +1,13 @@
 package com.simples.j.whereami
 
 import android.Manifest
-import android.app.ActivityOptions
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.ColorFilter
-import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.ActivityOptionsCompat
+import android.support.v4.util.Pair
 import android.support.v4.view.ViewCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
@@ -17,6 +15,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.view.animation.Transformation
 import android.widget.RelativeLayout
 import android.widget.Toast
@@ -34,7 +33,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_map.*
-import kotlinx.android.synthetic.main.content_detail.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
@@ -71,7 +69,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
         infoView.post { infoViewWidth = infoView.measuredWidth }
         myLocation.setOnClickListener(this)
-        setting.setOnClickListener(this)
+        more.setOnClickListener(this)
         address.setOnClickListener(this)
         setMyLocationButtonImage()
 
@@ -148,16 +146,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setOnCameraMoveStartedListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
-
-//        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-//            mMap.isMyLocationEnabled = true
-//            mMap.uiSettings.isMyLocationButtonEnabled = true
-//        }
     }
 
     override fun onCameraIdle() {
         isCameraMoving = false
-        zoomLevel = mMap.cameraPosition.zoom
+//        zoomLevel = mMap.cameraPosition.zoom
     }
 
     override fun onCameraMoveStarted(reason: Int) {
@@ -188,7 +181,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         }
                     }
                 }
-                R.id.setting -> {
+                R.id.more -> {
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.address -> {
@@ -197,10 +190,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 //                    intent.type = "text/plain"
 //                    intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
 //                    startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
-                    var intent = Intent(this, DetailActivity::class.java)
-                    intent.putExtra("addr", mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
-                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, address, ViewCompat.getTransitionName(address))
-                    startActivity(intent, options.toBundle())
+//                    var intent = Intent(this, DetailActivity::class.java)
+//                    intent.putExtra(DetailActivity.BUNDLE_ADDRESS, mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
+//                    intent.putExtra(DetailActivity.BUNDLE_LOCATION, currentLocation)
+//                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
+//                            Pair<View, String>(address, ViewCompat.getTransitionName(address)))
+//                    startActivity(intent, options.toBundle())
+                }
+                R.id.more -> {
+                    item_share.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.sub_menu_show))
                 }
             }
         }
@@ -255,7 +253,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 infoView.requestLayout()
             }
         }
-        anim.duration = 2000
+        anim.duration = 1000
         infoView.startAnimation(anim)
         isInfoViewCollapsed = true
         setMyLocationButtonImage()
@@ -270,7 +268,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 infoView.requestLayout()
             }
         }
-        anim.duration = 2000
+        anim.duration = 1000
         infoView.startAnimation(anim)
         isInfoViewCollapsed = false
         setMyLocationButtonImage()

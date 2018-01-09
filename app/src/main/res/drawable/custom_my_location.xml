@@ -3,7 +3,7 @@
     android:enterFadeDuration="@android:integer/config_shortAnimTime"
     android:exitFadeDuration="@android:integer/config_shortAnimTime">
     <item android:state_selected="true">
-        <color android:color="@color/colorPrimary" />
+        <color android:color="#78909c" />
     </item>
     <item>
         <color android:color="@android:color/transparent" />
