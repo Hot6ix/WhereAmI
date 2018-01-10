@@ -35,6 +35,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_map.*
+import java.text.DateFormat
+import java.util.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
@@ -216,11 +218,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     switchMenuLayout(!isMenuLayoutExpanded)
                 }
                 R.id.item_share -> {
-                    sharedPref.get
+                    val selected = sharedPref.getStringSet(resources.getString(R.string.pref_share_option_id), null).sorted()
+                    val text = StringBuilder()
+                    for(item in selected) {
+                        when(item.toInt()) {
+                            0 -> text.append("${mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude))}\n")
+                            1 -> text.append("${LatLng(currentLocation!!.latitude, currentLocation!!.longitude)}\n")
+                            2 -> text.append(DateFormat.getDateTimeInstance().format(Date(currentLocation!!.time)))
+                        }
+                    }
+                    Toast.makeText(applicationContext, selected.toString(), Toast.LENGTH_SHORT).show()
                     val intent = Intent()
                     intent.action = Intent.ACTION_SEND
                     intent.type = "text/plain"
-                    intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
+                    intent.putExtra(Intent.EXTRA_TEXT, text.toString())
                     startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
                 }
                 R.id.item_setting -> {
