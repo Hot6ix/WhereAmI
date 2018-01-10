@@ -30,13 +30,11 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_map.*
 import java.text.DateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
@@ -44,7 +42,7 @@ private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, View.OnClickListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, View.OnClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
@@ -62,6 +60,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isInfoViewCollapsed = false
     private var isMenuLayoutExpanded = false
     private var infoViewWidth = 0
+    private var markerList: ArrayList<Marker> = ArrayList()
 
     private var requestCount = 0
 
@@ -167,6 +166,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap = googleMap
         mMap.setOnCameraIdleListener(this)
         mMap.setOnCameraMoveStartedListener(this)
+        mMap.setOnMapLongClickListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
     }
@@ -190,6 +190,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 if(isMenuLayoutExpanded) switchMenuLayout(false)
             }
         }
+    }
+
+    override fun onMapLongClick(point: LatLng) {
+        markerList.add(mMap.addMarker(MarkerOptions().position(point).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
     }
 
     override fun onClick(view: View?) {
