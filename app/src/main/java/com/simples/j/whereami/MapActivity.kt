@@ -7,9 +7,6 @@ import android.location.Location
 import android.os.Bundle
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
-import android.support.v4.app.ActivityOptionsCompat
-import android.support.v4.util.Pair
-import android.support.v4.view.ViewCompat
 import android.support.v7.app.AppCompatActivity
 import android.transition.AutoTransition
 import android.transition.TransitionManager
@@ -17,7 +14,9 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.animation.*
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.Animation
+import android.view.animation.Transformation
 import android.widget.RelativeLayout
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
@@ -37,7 +36,8 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
-private const val ADDRESS_ANIM_DURATION: Long = 1000
+private const val ADDRESS_ANIM_DURATION: Long = 1500
+private const val MENU_EXPAND_DURATION: Long = 200
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, View.OnClickListener {
 
@@ -53,7 +53,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isMyLocationEnabled = true
     private var isCameraMoving = false
     private var isInfoViewCollapsed = false
-    private var isMoreViewCollapsed = true
+    private var isMenuLayoutExpanded = false
     private var infoViewWidth = 0
 
     private var requestCount = 0
@@ -73,8 +73,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         infoView.post { infoViewWidth = infoView.measuredWidth }
 
         myLocation.setOnClickListener(this)
-        item_more.setOnClickListener(this)
         address.setOnClickListener(this)
+        item_more.setOnClickListener(this)
+        item_share.setOnClickListener(this)
+        item_setting.setOnClickListener(this)
         setMyLocationButtonImage()
 
         // Ad
@@ -163,6 +165,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
                 if(!isInfoViewCollapsed) collapseInfoView()
+                if(isMenuLayoutExpanded) switchMenuLayout(false)
             }
         }
     }
@@ -186,36 +189,19 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 R.id.item_more -> {
-                    val constraintSet = ConstraintSet()
-                    constraintSet.clone(menu_layout)
-                    if(isMoreViewCollapsed) {
-                        // Set share
-                        constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 20)
-
-                        // Set setting
-                        constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 20)
-                    }
-                    else {
-                        // Set share
-                        constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.BOTTOM)
-                        // Set setting
-                        constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.BOTTOM)
-                    }
-                    val transition = AutoTransition()
-                    transition.duration = 300
-                    transition.interpolator = AccelerateDecelerateInterpolator()
-
-                    TransitionManager.beginDelayedTransition(menu_layout, transition)
-                    constraintSet.applyTo(menu_layout)
-
-                    isMoreViewCollapsed = !isMoreViewCollapsed
+                    switchMenuLayout(!isMenuLayoutExpanded)
+                }
+                R.id.item_share -> {
+                    val intent = Intent()
+                    intent.action = Intent.ACTION_SEND
+                    intent.type = "text/plain"
+                    intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
+                    startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
+                }
+                R.id.item_setting -> {
+                    startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.address -> {
-//                    val intent = Intent()
-//                    intent.action = Intent.ACTION_SEND
-//                    intent.type = "text/plain"
-//                    intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
-//                    startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
 //                    var intent = Intent(this, DetailActivity::class.java)
 //                    intent.putExtra(DetailActivity.BUNDLE_ADDRESS, mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
 //                    intent.putExtra(DetailActivity.BUNDLE_LOCATION, currentLocation)
@@ -270,7 +256,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     private fun collapseInfoView() {
-        var anim = object: Animation() {
+        val anim = object: Animation() {
             override fun applyTransformation(interpolatedTime: Float, t: Transformation?) {
                 infoView.layoutParams.width = ((myLocation.measuredWidth - infoView.measuredWidth) * interpolatedTime + infoView.measuredWidth).toInt()
                 infoView.requestLayout()
@@ -284,8 +270,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private fun expandInfoView() {
         infoView.measure(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT)
-        var width = infoView.measuredWidth
-        var anim = object: Animation() {
+        val anim = object: Animation() {
             override fun applyTransformation(interpolatedTime: Float, t: Transformation?) {
                 infoView.layoutParams.width = ((infoViewWidth * interpolatedTime) + infoView.measuredWidth).toInt()
                 infoView.requestLayout()
@@ -295,6 +280,32 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         infoView.startAnimation(anim)
         isInfoViewCollapsed = false
         setMyLocationButtonImage()
+    }
+
+    private fun switchMenuLayout(switch: Boolean) {
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(menu_layout)
+        if(switch) { // Expand
+            // Set share
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+
+            // Set setting
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
+        }
+        else { // Collapse
+            // Set share
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
+            // Set setting
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
+        }
+        val transition = AutoTransition()
+        transition.duration = MENU_EXPAND_DURATION
+        transition.interpolator = AccelerateDecelerateInterpolator()
+
+        TransitionManager.beginDelayedTransition(menu_layout, transition)
+        constraintSet.applyTo(menu_layout)
+
+        isMenuLayoutExpanded = !isMenuLayoutExpanded
     }
 
     private fun setMyLocationButtonImage() {
