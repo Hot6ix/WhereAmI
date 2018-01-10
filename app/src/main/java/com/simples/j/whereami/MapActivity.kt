@@ -4,11 +4,13 @@ import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.transition.AutoTransition
 import android.transition.TransitionManager
@@ -36,8 +38,9 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 private const val PERMISSION_REQUEST_CODE = 1
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
+private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1500
-private const val MENU_EXPAND_DURATION: Long = 200
+private const val MENU_EXPAND_DURATION: Long = 250
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, View.OnClickListener {
 
@@ -79,7 +82,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         item_more.setOnClickListener(this)
         item_share.setOnClickListener(this)
         item_setting.setOnClickListener(this)
-        setMyLocationButtonImage()
+        updateMyLocationButtonImage()
 
         // Ad
         MobileAds.initialize(this, applicationContext.getString(R.string.admob_app_id))
@@ -103,14 +106,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
 
                     if((!isFirstScanned || isMyLocationEnabled) && !isCameraMoving) {
-                        animateCamera(myLocation, zoomLevel, 0.toFloat())
+                        if(!isFirstScanned) {
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel))
+                            isFirstScanned = true
+                        }
+                        else animateCamera(myLocation, zoomLevel, 0.toFloat())
 
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
                         }
                         currentMarker!!.position = myLocation
                         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, myLocation)
-                        isFirstScanned = true
                     }
                 }
             }
@@ -165,7 +171,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onCameraIdle() {
         isCameraMoving = false
-//        zoomLevel = mMap.cameraPosition.zoom
+        zoomLevel = mMap.cameraPosition.zoom
     }
 
     override fun onCameraMoveStarted(reason: Int) {
@@ -173,6 +179,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
+                updateMyLocationButtonImage()
                 if(!isAddressViewLocked) {
                     if(!isInfoViewCollapsed) {
                         collapseInfoView()
@@ -193,9 +200,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     else {
                         myLocation.isSelected = !myLocation.isSelected
                         isMyLocationEnabled = !isMyLocationEnabled
-                        setMyLocationButtonImage()
+                        updateMyLocationButtonImage()
                         if(isMyLocationEnabled) {
-                            if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
+                            if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                             setLastLocation()
                             if(!isAddressViewLocked) {
                                 if(isInfoViewCollapsed) {
@@ -209,6 +216,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     switchMenuLayout(!isMenuLayoutExpanded)
                 }
                 R.id.item_share -> {
+                    sharedPref.get
                     val intent = Intent()
                     intent.action = Intent.ACTION_SEND
                     intent.type = "text/plain"
@@ -236,7 +244,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         when(requestCode) {
             PERMISSION_REQUEST_CODE -> {
                 if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
+                    if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                     mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
                 }
                 else {
@@ -254,13 +262,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private fun setLastLocation() {
         val l: Location? = mFusedLocationSingleton.getLastLocation(applicationContext)
+        val ll: LatLng?
         if(l != null) {
-            val ll: LatLng? = LatLng(l.latitude, l.longitude)
-            if(ll != null) {
-                Log.i(applicationContext.packageName, "Set camera to last known location")
-                animateCamera(ll, zoomLevel, 0.toFloat())
-            }
+            ll = LatLng(l.latitude, l.longitude)
         }
+        else {
+            ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
+        }
+        Log.i(applicationContext.packageName, "Set camera to last known location")
+        currentMarker!!.position = ll
+        animateCamera(ll, zoomLevel, 0.toFloat())
     }
 
     private fun animateCamera(myLocation: LatLng, zoom: Float, bearing: Float) {
@@ -282,7 +293,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         anim.duration = ADDRESS_ANIM_DURATION
         infoView.startAnimation(anim)
         isInfoViewCollapsed = true
-        setMyLocationButtonImage()
+        updateMyLocationButtonImage()
     }
 
     private fun expandInfoView() {
@@ -296,25 +307,38 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         anim.duration = ADDRESS_ANIM_DURATION
         infoView.startAnimation(anim)
         isInfoViewCollapsed = false
-        setMyLocationButtonImage()
+        updateMyLocationButtonImage()
     }
 
     private fun switchMenuLayout(switch: Boolean) {
         val constraintSet = ConstraintSet()
-        constraintSet.clone(menu_layout)
+        constraintSet.clone(main_layout)
         if(switch) { // Expand
+            // Set infp
+            constraintSet.connect(menu_item_info.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.clear(menu_item_info.id, ConstraintSet.BOTTOM)
             // Set share
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_info.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
             // Set setting
             constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.clear(menu_item_setting.id, ConstraintSet.BOTTOM)
 
             item_more.setImageDrawable(getDrawable(R.drawable.ic_action_clear))
         }
         else { // Collapse
+            // Set info
+            constraintSet.clear(menu_item_info.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_info.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_info.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // Set share
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
+            constraintSet.clear(menu_item_share.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_share.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // Set setting
-            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
+            constraintSet.clear(menu_item_setting.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
 
             item_more.setImageDrawable(getDrawable(R.drawable.ic_action_menu))
         }
@@ -322,16 +346,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         transition.duration = MENU_EXPAND_DURATION
         transition.interpolator = AccelerateDecelerateInterpolator()
 
-        TransitionManager.beginDelayedTransition(menu_layout, transition)
-        constraintSet.applyTo(menu_layout)
+        TransitionManager.beginDelayedTransition(main_layout, transition)
+        constraintSet.applyTo(main_layout)
 
         isMenuLayoutExpanded = !isMenuLayoutExpanded
     }
 
-    private fun setMyLocationButtonImage() {
+    private fun updateMyLocationButtonImage() {
         if(isMyLocationEnabled) {
             myLocation.isSelected = true
             myLocation.setImageDrawable(getDrawable(R.drawable.ic_menu_mylocation_light))
+            myLocation.drawable.mutate().setColorFilter(ContextCompat.getColor(applicationContext, R.color.colorPrimary), PorterDuff.Mode.MULTIPLY)
         }
         else {
             myLocation.isSelected = false

@@ -17,8 +17,7 @@
 
     <!-- Lock Address View -->
     <string name="pref_address_lock_id">ADDRESS_LOCK</string>
-    <string name="pref_address_lock_title">Always </string>
-    <string name="pref_address_lock_description"></string>
+    <string name="pref_address_lock_title">Lock address view</string>
     <!-- Share Settings -->
     <string name="pref_share_option_id">SHARE</string>
 
