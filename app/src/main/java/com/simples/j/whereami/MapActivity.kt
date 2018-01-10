@@ -2,17 +2,17 @@ package com.simples.j.whereami
 
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.transition.AutoTransition
 import android.transition.TransitionManager
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
@@ -44,6 +44,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
     private lateinit var locationCallback: LocationCallback
+    private lateinit var sharedPref: SharedPreferences
 
     private var zoomLevel: Float = 17.0f
     private var currentLocation: Location? = null
@@ -51,6 +52,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var currentMarker: Marker? = null
     private var isFirstScanned = false
     private var isMyLocationEnabled = true
+    private var isAddressViewLocked = false
     private var isCameraMoving = false
     private var isInfoViewCollapsed = false
     private var isMenuLayoutExpanded = false
@@ -85,6 +87,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         // Get services
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
         locationCallback = object: LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
@@ -117,6 +120,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     override fun onResume() {
         super.onResume()
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
+        isAddressViewLocked = sharedPref.getBoolean(resources.getString(R.string.pref_address_lock_id), false)
+        if(isAddressViewLocked) {
+            if(isInfoViewCollapsed) {
+                expandInfoView()
+            }
+        }
     }
 
     override fun onPause() {
@@ -124,27 +133,27 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        when (item!!.itemId) {
-            R.id.menu_share -> {
-                val intent = Intent()
-                intent.action = Intent.ACTION_SEND
-                intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
-//                intent.putExtra(Intent.EXTRA_TEXT, "${currentLocation!!.latitude}, ${currentLocation!!.longitude} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLocation!!.latitude, currentLocation!!.longitude)}")
-                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
-            }
-            R.id.menu_settings -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
+//    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+//        menuInflater.inflate(R.menu.menu, menu)
+//        return super.onCreateOptionsMenu(menu)
+//    }
+//
+//    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+//        when (item!!.itemId) {
+//            R.id.menu_share -> {
+//                val intent = Intent()
+//                intent.action = Intent.ACTION_SEND
+//                intent.type = "text/plain"
+//                intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
+////                intent.putExtra(Intent.EXTRA_TEXT, "${currentLocation!!.latitude}, ${currentLocation!!.longitude} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLocation!!.latitude, currentLocation!!.longitude)}")
+//                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
+//            }
+//            R.id.menu_settings -> {
+//                startActivity(Intent(this, SettingsActivity::class.java))
+//            }
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -164,7 +173,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
-                if(!isInfoViewCollapsed) collapseInfoView()
+                if(!isAddressViewLocked) {
+                    if(!isInfoViewCollapsed) {
+                        collapseInfoView()
+                    }
+                }
                 if(isMenuLayoutExpanded) switchMenuLayout(false)
             }
         }
@@ -184,7 +197,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         if(isMyLocationEnabled) {
                             if(zoomLevel < DEFAULT_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                             setLastLocation()
-                            if(isInfoViewCollapsed) expandInfoView()
+                            if(!isAddressViewLocked) {
+                                if(isInfoViewCollapsed) {
+                                    expandInfoView()
+                                }
+                            }
                         }
                     }
                 }
@@ -288,15 +305,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(switch) { // Expand
             // Set share
             constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
-
             // Set setting
             constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
+
+            item_more.setImageDrawable(getDrawable(R.drawable.ic_action_clear))
         }
         else { // Collapse
             // Set share
             constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
             // Set setting
             constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_layout.id, ConstraintSet.TOP)
+
+            item_more.setImageDrawable(getDrawable(R.drawable.ic_action_menu))
         }
         val transition = AutoTransition()
         transition.duration = MENU_EXPAND_DURATION

@@ -42,7 +42,8 @@
         </activity>
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/menu_settings" />
+            android:label="@string/menu_settings"
+            android:theme="@style/BasicTheme" />
 
         <service
             android:name=".TrackingService"
