@@ -103,6 +103,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 *   - Latitude, Longitude, Altitude, Time */
                 if(locationResult != null) {
                     currentLocation = locationResult.lastLocation
+                    if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
 
                     val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
 
