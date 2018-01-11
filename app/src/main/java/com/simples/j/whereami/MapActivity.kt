@@ -195,7 +195,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onMapLongClick(point: LatLng) {
-        markerList.add(mMap.addMarker(MarkerOptions().position(point).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
+        markerList.add(mMap.addMarker(MarkerOptions()
+                .position(point)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -232,6 +234,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         }
                     }
                 }
+                R.id.address -> {
+//                    var intent = Intent(this, DetailActivity::class.java)
+//                    intent.putExtra(DetailActivity.BUNDLE_ADDRESS, mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
+//                    intent.putExtra(DetailActivity.BUNDLE_LOCATION, currentLocation)
+//                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
+//                            Pair<View, String>(address, ViewCompat.getTransitionName(address)))
+//                    startActivity(intent, options.toBundle())
+                }
                 R.id.item_more -> {
                     switchMenuLayout(!isMenuLayoutExpanded)
                 }
@@ -255,13 +265,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 R.id.item_setting -> {
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
-                R.id.address -> {
-//                    var intent = Intent(this, DetailActivity::class.java)
-//                    intent.putExtra(DetailActivity.BUNDLE_ADDRESS, mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude)))
-//                    intent.putExtra(DetailActivity.BUNDLE_LOCATION, currentLocation)
-//                    var options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
-//                            Pair<View, String>(address, ViewCompat.getTransitionName(address)))
-//                    startActivity(intent, options.toBundle())
+                R.id.item_markers -> {
+                    markerList_layout
                 }
             }
         }
@@ -345,10 +350,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         constraintSet.clone(main_layout)
         if(switch) { // Expand
             // Set infp
-            constraintSet.connect(menu_item_info.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
-            constraintSet.clear(menu_item_info.id, ConstraintSet.BOTTOM)
+            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.clear(menu_item_markers.id, ConstraintSet.BOTTOM)
             // Set share
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_info.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
             constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
             // Set setting
             constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
@@ -358,9 +363,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
         else { // Collapse
             // Set info
-            constraintSet.clear(menu_item_info.id, ConstraintSet.TOP)
-            constraintSet.connect(menu_item_info.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
-            constraintSet.connect(menu_item_info.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
+            constraintSet.clear(menu_item_markers.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_markers.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // Set share
             constraintSet.clear(menu_item_share.id, ConstraintSet.TOP)
             constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
@@ -380,6 +385,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         constraintSet.applyTo(main_layout)
 
         isMenuLayoutExpanded = !isMenuLayoutExpanded
+    }
+
+    private fun switchMarkerList(switch: Boolean) {
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(main_layout)
+        if(switch) {
+            constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)
+            constraintSet.connect(markerList_layout.id, ConstraintSet.TOP, address_layout.id, ConstraintSet.BOTTOM)
+        }
+        else {
+            constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)
+            constraintSet.connect(markerList_layout.id, ConstraintSet.TOP, address_layout.id, ConstraintSet.BOTTOM)
+        }
+        val transition = AutoTransition()
+        transition.duration = MENU_EXPAND_DURATION
+        transition.interpolator = AccelerateDecelerateInterpolator()
+
+        TransitionManager.beginDelayedTransition(main_layout, transition)
+        constraintSet.applyTo(main_layout)
     }
 
     private fun updateMyLocationButtonImage() {
