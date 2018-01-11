@@ -42,7 +42,7 @@ private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, View.OnClickListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, View.OnClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
@@ -167,6 +167,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setOnCameraIdleListener(this)
         mMap.setOnCameraMoveStartedListener(this)
         mMap.setOnMapLongClickListener(this)
+        mMap.setOnMarkerClickListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
     }
@@ -194,6 +195,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onMapLongClick(point: LatLng) {
         markerList.add(mMap.addMarker(MarkerOptions().position(point).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
+    }
+
+    override fun onMarkerClick(marker: Marker): Boolean {
+        isMyLocationEnabled = false
+        updateMyLocationButtonImage()
+        if(!isAddressViewLocked) {
+            if(isInfoViewCollapsed){
+                expandInfoView()
+            }
+        }
+        address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
+        return false
     }
 
     override fun onClick(view: View?) {
@@ -286,6 +299,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
         Log.i(applicationContext.packageName, "Set camera to last known location")
         currentMarker!!.position = ll
+        address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
         animateCamera(ll, zoomLevel, 0.toFloat())
     }
 
