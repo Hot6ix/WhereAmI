@@ -266,7 +266,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-                    markerList_layout
+                    switchMarkerList(true)
                 }
             }
         }
@@ -391,8 +391,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val constraintSet = ConstraintSet()
         constraintSet.clone(main_layout)
         if(switch) {
+            constraintSet.clear(markerList_layout.id, ConstraintSet.END)
             constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)
-            constraintSet.connect(markerList_layout.id, ConstraintSet.TOP, address_layout.id, ConstraintSet.BOTTOM)
         }
         else {
             constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)

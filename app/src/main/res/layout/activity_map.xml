@@ -20,11 +20,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="60dp"
-        ads:layout_constraintLeft_toLeftOf="parent"
-        ads:layout_constraintRight_toRightOf="parent"
-        ads:layout_constraintBottom_toBottomOf="parent"
         ads:adSize="BANNER"
-        ads:adUnitId="ca-app-pub-3940256099942544/6300978111" />
+        ads:adUnitId="ca-app-pub-3940256099942544/6300978111"
+        ads:layout_constraintBottom_toBottomOf="parent"
+        ads:layout_constraintLeft_toLeftOf="parent"
+        ads:layout_constraintRight_toRightOf="parent" />
 
     <RelativeLayout
         android:id="@+id/address_layout"
@@ -36,14 +36,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
+            android:layout_marginBottom="10dp"
             android:layout_marginLeft="15dp"
             android:layout_marginRight="15dp"
             android:layout_marginTop="35dp"
-            android:layout_marginBottom="10dp"
             android:transitionName="@string/shared_element_address_view"
-            card_view:layout_constraintTop_toTopOf="parent"
             card_view:cardCornerRadius="5dp"
-            card_view:cardElevation="5dp">
+            card_view:cardElevation="5dp"
+            card_view:layout_constraintTop_toTopOf="parent">
 
             <android.support.constraint.ConstraintLayout
                 android:layout_width="match_parent"
@@ -63,9 +63,9 @@
                     android:padding="8dp"
                     android:textSize="13sp"
                     android:transitionName="@string/shared_element_address"
-                    card_view:layout_constraintHorizontal_bias="0"
                     card_view:layout_constraintBottom_toBottomOf="parent"
                     card_view:layout_constraintEnd_toStartOf="@+id/myLocation"
+                    card_view:layout_constraintHorizontal_bias="0"
                     card_view:layout_constraintStart_toStartOf="parent"
                     card_view:layout_constraintTop_toTopOf="parent" />
 
@@ -75,8 +75,8 @@
                     android:layout_height="48dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:contentDescription="@android:string/untitled"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@android:string/untitled"
                     android:padding="10dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_menu_mylocation_light"
@@ -92,17 +92,18 @@
 
     <android.support.v7.widget.CardView
         android:id="@+id/markerList_layout"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
-        app:layout_constraintEnd_toStartOf="@id/main_layout"
         app:cardCornerRadius="5dp"
-        app:cardElevation="5dp">
+        app:cardElevation="5dp"
+        app:layout_constraintEnd_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/address_layout">
 
-        <ListView
-            android:id="@+id/markerList"
+        <TextView
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:text="123423r"/>
 
     </android.support.v7.widget.CardView>
 
@@ -113,9 +114,9 @@
         card_view:cardCornerRadius="5dp"
         card_view:cardElevation="3dp"
         card_view:layout_constraintBottom_toBottomOf="@id/menu_item_more"
-        card_view:layout_constraintTop_toTopOf="@id/menu_item_more"
+        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more"
         card_view:layout_constraintStart_toStartOf="@id/menu_item_more"
-        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more">
+        card_view:layout_constraintTop_toTopOf="@id/menu_item_more">
 
         <ImageButton
             android:id="@+id/item_setting"
@@ -136,9 +137,9 @@
         card_view:cardCornerRadius="5dp"
         card_view:cardElevation="3dp"
         card_view:layout_constraintBottom_toBottomOf="@id/menu_item_more"
-        card_view:layout_constraintTop_toTopOf="@id/menu_item_more"
+        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more"
         card_view:layout_constraintStart_toStartOf="@id/menu_item_more"
-        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more">
+        card_view:layout_constraintTop_toTopOf="@id/menu_item_more">
 
         <ImageButton
             android:id="@+id/item_share"
@@ -159,9 +160,9 @@
         card_view:cardCornerRadius="5dp"
         card_view:cardElevation="3dp"
         card_view:layout_constraintBottom_toBottomOf="@id/menu_item_more"
-        card_view:layout_constraintTop_toTopOf="@id/menu_item_more"
+        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more"
         card_view:layout_constraintStart_toStartOf="@id/menu_item_more"
-        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more">
+        card_view:layout_constraintTop_toTopOf="@id/menu_item_more">
 
         <ImageButton
             android:id="@+id/item_markers"
@@ -180,10 +181,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="15dp"
-        card_view:layout_constraintRight_toRightOf="parent"
-        card_view:layout_constraintTop_toBottomOf="@+id/address_layout"
         card_view:cardCornerRadius="5dp"
-        card_view:cardElevation="5dp">
+        card_view:cardElevation="5dp"
+        card_view:layout_constraintRight_toRightOf="parent"
+        card_view:layout_constraintTop_toBottomOf="@+id/address_layout">
 
         <ImageButton
             android:id="@+id/item_more"
