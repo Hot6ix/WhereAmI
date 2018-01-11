@@ -1,5 +1,4 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
@@ -89,23 +88,6 @@
         </android.support.v7.widget.CardView>
 
     </RelativeLayout>
-
-    <android.support.v7.widget.CardView
-        android:id="@+id/markerList_layout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="15dp"
-        app:cardCornerRadius="5dp"
-        app:cardElevation="5dp"
-        app:layout_constraintEnd_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/address_layout">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="123423r"/>
-
-    </android.support.v7.widget.CardView>
 
     <android.support.v7.widget.CardView xmlns:card_view="http://schemas.android.com/apk/res-auto"
         android:id="@+id/menu_item_setting"
@@ -197,6 +179,29 @@
             android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_action_menu" />
+    </android.support.v7.widget.CardView>
+
+    <android.support.v7.widget.CardView xmlns:card_view="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/marker_item_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        card_view:cardCornerRadius="5dp"
+        card_view:cardElevation="3dp"
+        card_view:layout_constraintBottom_toBottomOf="@id/menu_item_more"
+        card_view:layout_constraintEnd_toEndOf="@id/menu_item_more"
+        card_view:layout_constraintStart_toStartOf="@id/menu_item_more"
+        card_view:layout_constraintTop_toTopOf="@id/menu_item_more">
+
+        <ImageButton
+            android:id="@+id/marker_delete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@android:string/untitled"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_action_delete" />
+
     </android.support.v7.widget.CardView>
 
 </android.support.constraint.ConstraintLayout>

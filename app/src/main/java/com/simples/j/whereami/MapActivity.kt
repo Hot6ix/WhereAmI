@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
@@ -19,6 +20,7 @@ import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.Transformation
+import android.widget.ArrayAdapter
 import android.widget.RelativeLayout
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
@@ -41,6 +43,7 @@ private const val DEFAULT_CAMERA_ZOOM = 15.0f
 private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
+val Int.toDp: Int get() = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, View.OnClickListener {
 
@@ -59,8 +62,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isCameraMoving = false
     private var isInfoViewCollapsed = false
     private var isMenuLayoutExpanded = false
+    private var isMarkerOptionExpanded = false
     private var infoViewWidth = 0
     private var markerList: ArrayList<Marker> = ArrayList()
+    private var selectedMarkerId: String? = null
 
     private var requestCount = 0
 
@@ -81,8 +86,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         myLocation.setOnClickListener(this)
         address.setOnClickListener(this)
         item_more.setOnClickListener(this)
+        item_markers.setOnClickListener(this)
         item_share.setOnClickListener(this)
         item_setting.setOnClickListener(this)
+        marker_delete.setOnClickListener(this)
         updateMyLocationButtonImage()
 
         // Ad
@@ -190,6 +197,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 if(isMenuLayoutExpanded) switchMenuLayout(false)
+                if(isMarkerOptionExpanded) switchMarkerOption(false)
             }
         }
     }
@@ -209,6 +217,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             }
         }
         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
+        selectedMarkerId = marker.id
+        if(!isMarkerOptionExpanded) switchMarkerOption(true)
         return false
     }
 
@@ -266,7 +276,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-                    switchMarkerList(true)
+                }
+                R.id.marker_delete -> {
+                    markerList.single { it.id == selectedMarkerId }.remove()
+                    switchMarkerOption(false)
                 }
             }
         }
@@ -349,15 +362,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val constraintSet = ConstraintSet()
         constraintSet.clone(main_layout)
         if(switch) { // Expand
-            // Set infp
-            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            // Set info
             constraintSet.clear(menu_item_markers.id, ConstraintSet.BOTTOM)
+            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
             // Set share
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
             constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
+            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
             // Set setting
-            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
             constraintSet.clear(menu_item_setting.id, ConstraintSet.BOTTOM)
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
 
             item_more.setImageDrawable(getDrawable(R.drawable.ic_action_clear))
         }
@@ -383,20 +396,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         TransitionManager.beginDelayedTransition(main_layout, transition)
         constraintSet.applyTo(main_layout)
-
         isMenuLayoutExpanded = !isMenuLayoutExpanded
     }
 
-    private fun switchMarkerList(switch: Boolean) {
+    private fun switchMarkerOption(switch: Boolean) {
         val constraintSet = ConstraintSet()
         constraintSet.clone(main_layout)
         if(switch) {
-            constraintSet.clear(markerList_layout.id, ConstraintSet.END)
-            constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)
+            constraintSet.clear(marker_item_delete.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_delete.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.START, 30)
         }
         else {
-            constraintSet.connect(markerList_layout.id, ConstraintSet.START, main_layout.id, ConstraintSet.START)
-            constraintSet.connect(markerList_layout.id, ConstraintSet.TOP, address_layout.id, ConstraintSet.BOTTOM)
+            constraintSet.clear(marker_item_delete.id, ConstraintSet.END)
+            constraintSet.connect(marker_item_delete.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_delete.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.END)
         }
         val transition = AutoTransition()
         transition.duration = MENU_EXPAND_DURATION
@@ -404,6 +417,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         TransitionManager.beginDelayedTransition(main_layout, transition)
         constraintSet.applyTo(main_layout)
+        isMarkerOptionExpanded = !isMarkerOptionExpanded
     }
 
     private fun updateMyLocationButtonImage() {
