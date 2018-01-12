@@ -20,7 +20,6 @@ import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.Transformation
-import android.widget.ArrayAdapter
 import android.widget.RelativeLayout
 import android.widget.Toast
 import com.google.android.gms.ads.AdRequest
@@ -45,7 +44,7 @@ private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
 val Int.toDp: Int get() = (this * Resources.getSystem().displayMetrics.density).toInt()
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener, View.OnClickListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener, View.OnClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
@@ -64,6 +63,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isAddressViewLocked = false
     private var isCameraMoving = false
     private var isLinkMode = false
+    private var isUnlinkMode = false
 
     private var isInfoViewCollapsed = false
     private var isMenuLayoutExpanded = false
@@ -72,7 +72,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private var markerList: ArrayList<Marker> = ArrayList()
     private var lineList: ArrayList<Polyline> = ArrayList()
-    private var line: Polyline? = null
     private var selectedMarker: Marker? = null
 
     private var requestCount = 0
@@ -94,10 +93,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         myLocation.setOnClickListener(this)
         address.setOnClickListener(this)
         item_more.setOnClickListener(this)
+        item_clearAll.setOnClickListener(this)
         item_markers.setOnClickListener(this)
         item_share.setOnClickListener(this)
         item_setting.setOnClickListener(this)
         marker_delete.setOnClickListener(this)
+        marker_unlink.setOnClickListener(this)
         marker_link.setOnClickListener(this)
         updateMyLocationButtonImage()
 
@@ -158,35 +159,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
-//    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-//        menuInflater.inflate(R.menu.menu, menu)
-//        return super.onCreateOptionsMenu(menu)
-//    }
-//
-//    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-//        when (item!!.itemId) {
-//            R.id.menu_share -> {
-//                val intent = Intent()
-//                intent.action = Intent.ACTION_SEND
-//                intent.type = "text/plain"
-//                intent.putExtra(Intent.EXTRA_TEXT, currentLocation.toString())
-////                intent.putExtra(Intent.EXTRA_TEXT, "${currentLocation!!.latitude}, ${currentLocation!!.longitude} \n${mFusedLocationSingleton.getAddrFromCoordinate(applicationContext, currentLocation!!.latitude, currentLocation!!.longitude)}")
-//                startActivity(Intent.createChooser(intent, resources.getText(R.string.send_to)))
-//            }
-//            R.id.menu_settings -> {
-//                startActivity(Intent(this, SettingsActivity::class.java))
-//            }
-//        }
-//        return super.onOptionsItemSelected(item)
-//    }
-
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.setOnCameraIdleListener(this)
         mMap.setOnCameraMoveStartedListener(this)
         mMap.setOnMapLongClickListener(this)
         mMap.setOnMarkerClickListener(this)
-        mMap.setOnMarkerDragListener(this)
+        mMap.setOnPolylineClickListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
     }
@@ -208,14 +187,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 if(isMenuLayoutExpanded) switchMenuLayout(false)
-                if(isMarkerOptionExpanded) switchMarkerOption(false)
+                if(!isLinkMode && !isUnlinkMode){
+                    if(isMarkerOptionExpanded) switchMarkerOption(false)
+                }
             }
         }
     }
 
     override fun onMapLongClick(point: LatLng) {
         markerList.add(mMap.addMarker(MarkerOptions()
-                .draggable(true)
                 .position(point)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
     }
@@ -233,10 +213,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(!isMarkerOptionExpanded) switchMarkerOption(true)
         if(isLinkMode) {
             endMarkerLatLng = marker.position
-            line = mMap.addPolyline(PolylineOptions()
-                    .add(startMarkerLatLng)
-                    .add(endMarkerLatLng))
             lineList.add(mMap.addPolyline(PolylineOptions()
+                    .clickable(true)
                     .add(startMarkerLatLng)
                     .add(endMarkerLatLng)))
             isLinkMode = false
@@ -244,12 +222,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         return false
     }
 
-    override fun onMarkerDrag(marker: Marker) {}
-
-    override fun onMarkerDragStart(marker: Marker?) {}
-
-    override fun onMarkerDragEnd(marker: Marker) {
-        line!!.points[0] = marker.position
+    override fun onPolylineClick(polyline: Polyline) {
+        if(isUnlinkMode) {
+            lineList.filter { it == polyline }.map { it.remove() }
+        }
     }
 
     override fun onClick(view: View?) {
@@ -260,10 +236,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
                     }
                     else {
-                        myLocation.isSelected = !myLocation.isSelected
                         isMyLocationEnabled = !isMyLocationEnabled
                         updateMyLocationButtonImage()
                         if(isMyLocationEnabled) {
+                            selectedMarker = currentMarker
                             if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                             setLastLocation()
                             if(!isAddressViewLocked) {
@@ -285,12 +261,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 R.id.item_more -> {
                     switchMenuLayout(!isMenuLayoutExpanded)
                 }
+                R.id.item_clearAll -> {
+                    markerList.filter { it.position != currentMarker!!.position }.map { it.remove() }
+                    lineList.map { it.remove() }
+                    isLinkMode = false
+                    isUnlinkMode = false
+                    switchMarkerOption(false)
+                    Toast.makeText(applicationContext, "All markers and lines removed.", Toast.LENGTH_SHORT).show()
+                }
                 R.id.item_share -> {
                     val selected = sharedPref.getStringSet(resources.getString(R.string.pref_share_option_id), null).sorted()
                     val text = StringBuilder()
                     for(item in selected) {
                         when(item.toInt()) {
-                            0 -> text.append("${mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, LatLng(currentLocation!!.latitude, currentLocation!!.longitude))}\n")
+                            0 -> text.append("${mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, selectedMarker!!.position)}\n")
                             1 -> text.append("${LatLng(currentLocation!!.latitude, currentLocation!!.longitude)}\n")
                             2 -> text.append(DateFormat.getDateTimeInstance().format(Date(currentLocation!!.time)))
                         }
@@ -318,11 +302,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         switchMarkerOption(false)
                     }
                 }
+                R.id.marker_unlink -> {
+                    isUnlinkMode = true
+                    Toast.makeText(applicationContext, "Select line to remove", Toast.LENGTH_SHORT).show()
+                }
                 R.id.marker_link -> {
                     isLinkMode = true
                     startMarkerLatLng = selectedMarker!!.position
                     Toast.makeText(applicationContext, "Select other marker", Toast.LENGTH_SHORT).show()
-
                 }
             }
         }
@@ -405,9 +392,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val constraintSet = ConstraintSet()
         constraintSet.clone(main_layout)
         if(switch) { // Expand
-            // Info
+            // Clear all
+            constraintSet.clear(menu_item_clearAll.id, ConstraintSet.BOTTOM)
+            constraintSet.connect(menu_item_clearAll.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            // MarkerList
             constraintSet.clear(menu_item_markers.id, ConstraintSet.BOTTOM)
-            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_clearAll.id, ConstraintSet.BOTTOM, 30)
             // Share
             constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
             constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
@@ -418,6 +408,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             item_more.setImageDrawable(getDrawable(R.drawable.ic_action_clear))
         }
         else { // Collapse
+            // Clear all
+            constraintSet.clear(menu_item_clearAll.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_clearAll.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+            constraintSet.connect(menu_item_clearAll.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // MarkerList
             constraintSet.clear(menu_item_markers.id, ConstraintSet.TOP)
             constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
@@ -449,15 +443,22 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             // Delete marker
             constraintSet.clear(marker_item_delete.id, ConstraintSet.START)
             constraintSet.connect(marker_item_delete.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.START, 30)
+            // Remove line
+            constraintSet.clear(marker_item_unlink.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_unlink.id, ConstraintSet.END, marker_item_delete.id, ConstraintSet.START, 30)
             // Link marker
             constraintSet.clear(marker_item_link.id, ConstraintSet.START)
-            constraintSet.connect(marker_item_link.id, ConstraintSet.END, marker_item_delete.id, ConstraintSet.START, 30)
+            constraintSet.connect(marker_item_link.id, ConstraintSet.END, marker_item_unlink.id, ConstraintSet.START, 30)
         }
         else {
             // Delete marker
             constraintSet.clear(marker_item_delete.id, ConstraintSet.END)
             constraintSet.connect(marker_item_delete.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
             constraintSet.connect(marker_item_delete.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.END)
+            // Remove line
+            constraintSet.clear(marker_item_unlink.id, ConstraintSet.END)
+            constraintSet.connect(marker_item_unlink.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_unlink.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.END)
             // Link marker
             constraintSet.clear(marker_item_link.id, ConstraintSet.END)
             constraintSet.connect(marker_item_link.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
@@ -486,7 +487,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private fun removeLineDependency(position: LatLng) {
         for(item in lineList) {
-            item.points.filter { it == position }.map { lineList.remove(item) }
+            item.points.filter { it == position }.map { item.remove() }
         }
     }
+
+    private fun checkLineDuplicattion() {}
 }
