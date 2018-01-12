@@ -45,7 +45,7 @@ private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
 val Int.toDp: Int get() = (this * Resources.getSystem().displayMetrics.density).toInt()
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, View.OnClickListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener, View.OnClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
@@ -185,6 +185,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setOnCameraMoveStartedListener(this)
         mMap.setOnMapLongClickListener(this)
         mMap.setOnMarkerClickListener(this)
+        mMap.setOnMarkerDragListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
     }
@@ -237,6 +238,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
         return false
     }
+
+    override fun onMarkerDrag(marker: Marker?) {
+    }
+
+    override fun onMarkerDragStart(marker: Marker?) {}
+
+    override fun onMarkerDragEnd(marker: Marker?) {}
 
     override fun onClick(view: View?) {
         if(view != null) {
@@ -292,6 +300,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
+                    currentMarker!!.isDraggable = true
                 }
                 R.id.marker_delete -> {
                     if(selectedMarker!!.id == currentMarker!!.id) {
