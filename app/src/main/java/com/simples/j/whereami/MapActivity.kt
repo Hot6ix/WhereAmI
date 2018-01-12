@@ -217,6 +217,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             endMarkerLatLng = marker.position
             lineList.add(mMap.addPolyline(PolylineOptions()
                     .clickable(true)
+                    .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
                     .add(startMarkerLatLng)
                     .add(endMarkerLatLng)))
             startMarkerLatLng = marker.position
