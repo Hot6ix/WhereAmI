@@ -72,6 +72,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private var markerList: ArrayList<Marker> = ArrayList()
     private var lineList: ArrayList<Polyline> = ArrayList()
+    private var line: Polyline? = null
     private var selectedMarker: Marker? = null
 
     private var requestCount = 0
@@ -214,6 +215,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onMapLongClick(point: LatLng) {
         markerList.add(mMap.addMarker(MarkerOptions()
+                .draggable(true)
                 .position(point)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
     }
@@ -231,6 +233,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(!isMarkerOptionExpanded) switchMarkerOption(true)
         if(isLinkMode) {
             endMarkerLatLng = marker.position
+            line = mMap.addPolyline(PolylineOptions()
+                    .add(startMarkerLatLng)
+                    .add(endMarkerLatLng))
             lineList.add(mMap.addPolyline(PolylineOptions()
                     .add(startMarkerLatLng)
                     .add(endMarkerLatLng)))
@@ -239,12 +244,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         return false
     }
 
-    override fun onMarkerDrag(marker: Marker?) {
-    }
+    override fun onMarkerDrag(marker: Marker) {}
 
     override fun onMarkerDragStart(marker: Marker?) {}
 
-    override fun onMarkerDragEnd(marker: Marker?) {}
+    override fun onMarkerDragEnd(marker: Marker) {
+        line!!.points[0] = marker.position
+    }
 
     override fun onClick(view: View?) {
         if(view != null) {
