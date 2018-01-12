@@ -201,8 +201,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        isMyLocationEnabled = false
-        updateMyLocationButtonImage()
+        if(marker != currentMarker) {
+            isMyLocationEnabled = false
+            updateMyLocationButtonImage()
+        }
         if(!isAddressViewLocked) {
             if(isInfoViewCollapsed){
                 expandInfoView()
@@ -217,7 +219,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     .clickable(true)
                     .add(startMarkerLatLng)
                     .add(endMarkerLatLng)))
-            isLinkMode = false
+            startMarkerLatLng = marker.position
         }
         return false
     }
@@ -266,6 +268,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     lineList.map { it.remove() }
                     isLinkMode = false
                     isUnlinkMode = false
+                    updateLinkButtonImage()
+                    updateUnlinkButtonImage()
                     switchMarkerOption(false)
                     Toast.makeText(applicationContext, "All markers and lines removed.", Toast.LENGTH_SHORT).show()
                 }
@@ -290,7 +294,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-                    currentMarker!!.isDraggable = true
+
                 }
                 R.id.marker_delete -> {
                     if(selectedMarker!!.id == currentMarker!!.id) {
@@ -299,16 +303,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     else {
                         removeLineDependency(selectedMarker!!.position)
                         markerList.single { it.id == selectedMarker!!.id }.remove()
+                        isLinkMode = false
+                        isUnlinkMode = false
+                        updateLinkButtonImage()
+                        updateUnlinkButtonImage()
                         switchMarkerOption(false)
                     }
                 }
                 R.id.marker_unlink -> {
-                    isUnlinkMode = true
+                    isUnlinkMode = !isUnlinkMode
+                    if(isUnlinkMode) {
+                        isLinkMode = false
+                        updateLinkButtonImage()
+                    }
+                    updateUnlinkButtonImage()
                     Toast.makeText(applicationContext, "Select line to remove", Toast.LENGTH_SHORT).show()
                 }
                 R.id.marker_link -> {
-                    isLinkMode = true
+                    isLinkMode = !isLinkMode
+                    if(isLinkMode) {
+                        isUnlinkMode = false
+                        updateUnlinkButtonImage()
+                    }
                     startMarkerLatLng = selectedMarker!!.position
+                    updateLinkButtonImage()
                     Toast.makeText(applicationContext, "Select other marker", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -433,7 +451,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         TransitionManager.beginDelayedTransition(main_layout, transition)
         constraintSet.applyTo(main_layout)
-        isMenuLayoutExpanded = !isMenuLayoutExpanded
+        isMenuLayoutExpanded = switch
     }
 
     private fun switchMarkerOption(switch: Boolean) {
@@ -470,18 +488,36 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         TransitionManager.beginDelayedTransition(main_layout, transition)
         constraintSet.applyTo(main_layout)
-        isMarkerOptionExpanded = !isMarkerOptionExpanded
+        isMarkerOptionExpanded = switch
     }
 
     private fun updateMyLocationButtonImage() {
         if(isMyLocationEnabled) {
-            myLocation.isSelected = true
             myLocation.setImageDrawable(getDrawable(R.drawable.ic_menu_mylocation_light))
             myLocation.drawable.mutate().setColorFilter(ContextCompat.getColor(applicationContext, R.color.colorPrimary), PorterDuff.Mode.MULTIPLY)
         }
         else {
-            myLocation.isSelected = false
             myLocation.setImageDrawable(getDrawable(R.drawable.ic_menu_mylocation_dark))
+        }
+    }
+
+    private fun updateLinkButtonImage() {
+        if(isLinkMode) {
+            marker_link.setImageDrawable(getDrawable(R.drawable.ic_action_link_light))
+            marker_link.drawable.mutate().setColorFilter(ContextCompat.getColor(applicationContext, R.color.colorPrimary), PorterDuff.Mode.MULTIPLY)
+        }
+        else {
+            marker_link.setImageDrawable(getDrawable(R.drawable.ic_action_link_dark))
+        }
+    }
+
+    private fun updateUnlinkButtonImage() {
+        if(isUnlinkMode) {
+            marker_unlink.setImageDrawable(getDrawable(R.drawable.ic_action_unlink_light))
+            marker_unlink.drawable.mutate().setColorFilter(ContextCompat.getColor(applicationContext, R.color.colorPrimary), PorterDuff.Mode.MULTIPLY)
+        }
+        else {
+            marker_unlink.setImageDrawable(getDrawable(R.drawable.ic_action_unlink_dark))
         }
     }
 
@@ -490,6 +526,4 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             item.points.filter { it == position }.map { item.remove() }
         }
     }
-
-    private fun checkLineDuplicattion() {}
 }
