@@ -213,8 +213,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
         selectedMarker = marker
         if(!isMarkerOptionExpanded) switchMarkerOption(true)
-        if(isLinkMode) {
+        if(isLinkMode ) {
             endMarkerLatLng = marker.position
+            var bounds = LatLngBounds.builder().include(startMarkerLatLng).include(endMarkerLatLng).build()
+            var startLocation = Location("start")
+            startLocation.latitude = startMarkerLatLng!!.latitude
+            startLocation.longitude = startMarkerLatLng!!.longitude
+            var endLocation = Location("end")
+            endLocation.latitude = endMarkerLatLng!!.latitude
+            endLocation.longitude = endMarkerLatLng!!.longitude
+//            mMap.addMarker(MarkerOptions()
+//                    .title(startLocation.distanceTo(endLocation).toString())
+//                    .position(bounds.center)).showInfoWindow()
             lineList.add(mMap.addPolyline(PolylineOptions()
                     .clickable(true)
                     .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
@@ -244,12 +254,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         if(isMyLocationEnabled) {
                             selectedMarker = currentMarker
                             if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
-                            setLastLocation()
                             if(!isAddressViewLocked) {
                                 if(isInfoViewCollapsed) {
                                     expandInfoView()
                                 }
                             }
+                            setLastLocation()
                         }
                     }
                 }
@@ -358,7 +368,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private fun setLastLocation() {
         val l: Location? = mFusedLocationSingleton.getLastLocation(applicationContext)
-        val ll: LatLng?
+        val ll: LatLng
         if(l != null) {
             ll = LatLng(l.latitude, l.longitude)
         }
@@ -525,6 +535,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private fun removeLineDependency(position: LatLng) {
         for(item in lineList) {
             item.points.filter { it == position }.map { item.remove() }
+        }
+    }
+
+    private fun reconnectLineToMyLocation(previous: LatLng) {
+        for(item in lineList) {
+            for(points in item.points) {
+                var pList = ArrayList<LatLng>()
+                if(points == previous) pList.add(currentMarker!!.position)
+                else pList.add(points)
+
+                item.points = pList
+            }
         }
     }
 }
