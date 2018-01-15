@@ -186,7 +186,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onCameraMoveStarted(reason: Int) {
         isCameraMoving = true
-        controlDistanceMarker()
+//        controlDistanceMarker()
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
@@ -619,9 +619,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     private fun controlDistanceMarker() {
-        if(zoomLevel > 15 && zoomLevel < 16) lineDistanceList.filter { it.snippet.toFloat() < 100f }.map { it.isVisible = false }
-        else if(zoomLevel > 14 && zoomLevel < 15f) lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
-        else if(zoomLevel > 13 && zoomLevel < 14f) lineDistanceList.filter { it.snippet.toFloat() < 300f }.map { it.isVisible = false }
-        else if(zoomLevel < 13f) lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = false }
+        if(zoomLevel < 14) {
+            lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = false }
+        }
+        else if(zoomLevel < 15) {
+            lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = true }
+            lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
+        }
+        else if(zoomLevel < 16) {
+            lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
+            lineDistanceList.filter { it.snippet.toFloat() < 100f }.map { it.isVisible = false }
+        }
     }
 }
