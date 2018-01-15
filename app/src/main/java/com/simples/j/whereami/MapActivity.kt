@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.content.res.Resources
+import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
@@ -32,6 +32,8 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.maps.android.SphericalUtil
+import com.google.maps.android.ui.IconGenerator
 import kotlinx.android.synthetic.main.activity_map.*
 import java.text.DateFormat
 import java.util.*
@@ -42,7 +44,6 @@ private const val DEFAULT_CAMERA_ZOOM = 15.0f
 private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1500
 private const val MENU_EXPAND_DURATION: Long = 250
-val Int.toDp: Int get() = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener, View.OnClickListener {
 
@@ -73,6 +74,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private var markerList: ArrayList<Marker> = ArrayList()
     private var lineList: ArrayList<Polyline> = ArrayList()
+    private var lineDistanceList: ArrayList<Marker> = ArrayList()
     private var selectedMarker: Marker? = null
 
     private var requestCount = 0
@@ -124,9 +126,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
 
                     val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
-                    if(previousLatLng != null) {
-                        reconnectLineToMyLocation(previousLatLng!!, myLocation)
-                    }
 
                     if((!isFirstScanned || isMyLocationEnabled) && !isCameraMoving) {
                         if(!isFirstScanned) {
@@ -141,6 +140,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         }
                         currentMarker!!.position = myLocation
                         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, myLocation)
+
+                        if(previousLatLng != null) {
+                            reconnectLineToMyLocation(previousLatLng!!, myLocation)
+                        }
+                        else previousLatLng = myLocation
                     }
                 }
             }
@@ -177,10 +181,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     override fun onCameraIdle() {
         isCameraMoving = false
         zoomLevel = mMap.cameraPosition.zoom
+        Log.i("zzoommmmm", zoomLevel.toString())
     }
 
     override fun onCameraMoveStarted(reason: Int) {
         isCameraMoving = true
+        controlDistanceMarker()
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
@@ -205,6 +211,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
+        if(marker.tag == "DISTANCE") return true
         if(marker != currentMarker) {
             isMyLocationEnabled = false
             updateMyLocationButtonImage()
@@ -217,31 +224,37 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
         selectedMarker = marker
         if(!isMarkerOptionExpanded) switchMarkerOption(true)
-        if(isLinkMode ) {
+        if(isLinkMode) {
             endMarkerLatLng = marker.position
-            var bounds = LatLngBounds.builder().include(startMarkerLatLng).include(endMarkerLatLng).build()
-            var startLocation = Location("start")
-            startLocation.latitude = startMarkerLatLng!!.latitude
-            startLocation.longitude = startMarkerLatLng!!.longitude
-            var endLocation = Location("end")
-            endLocation.latitude = endMarkerLatLng!!.latitude
-            endLocation.longitude = endMarkerLatLng!!.longitude
-//            mMap.addMarker(MarkerOptions()
-//                    .title(startLocation.distanceTo(endLocation).toString())
-//                    .position(bounds.center)).showInfoWindow()
-            lineList.add(mMap.addPolyline(PolylineOptions()
-                    .clickable(true)
-                    .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
-                    .add(startMarkerLatLng)
-                    .add(endMarkerLatLng)))
-            startMarkerLatLng = marker.position
+
+            if(startMarkerLatLng != endMarkerLatLng) {
+                val distanceMarker = mMap.addMarker(MarkerOptions()
+                        .position(getDistanceBetween(startMarkerLatLng!!, endMarkerLatLng!!))
+                        .icon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(startMarkerLatLng!!, endMarkerLatLng!!))))
+                distanceMarker.tag = "DISTANCE"
+                distanceMarker.showInfoWindow()
+                distanceMarker.snippet = SphericalUtil.computeDistanceBetween(startMarkerLatLng!!, endMarkerLatLng!!).toString()
+                lineDistanceList.add(distanceMarker)
+
+                lineList.add(mMap.addPolyline(PolylineOptions()
+                        .clickable(true)
+                        .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+                        .add(startMarkerLatLng)
+                        .add(endMarkerLatLng)))
+                startMarkerLatLng = marker.position
+            }
         }
         return false
     }
 
     override fun onPolylineClick(polyline: Polyline) {
         if(isUnlinkMode) {
-            lineList.filter { it == polyline }.map { it.remove() }
+            lineList.filter { it == polyline }.mapIndexed { index, it ->
+                it.remove()
+                lineList.remove(polyline)
+                lineDistanceList[index].remove()
+                lineDistanceList.removeAt(index)
+            }
         }
     }
 
@@ -280,7 +293,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 }
                 R.id.item_clearAll -> {
                     markerList.filter { it.position != currentMarker!!.position }.map { it.remove() }
+                    markerList.removeAll { it.position != currentMarker!!.position }
                     lineList.map { it.remove() }
+                    lineList.clear()
+                    lineDistanceList.map { it.remove() }
+                    lineDistanceList.clear()
                     isLinkMode = false
                     isUnlinkMode = false
                     updateLinkButtonImage()
@@ -318,6 +335,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     else {
                         removeLineDependency(selectedMarker!!.position)
                         markerList.single { it.id == selectedMarker!!.id }.remove()
+                        markerList.remove(markerList.single { it.id == selectedMarker!!.id })
                         isLinkMode = false
                         isUnlinkMode = false
                         updateLinkButtonImage()
@@ -373,17 +391,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private fun setLastLocation() {
         val l: Location? = mFusedLocationSingleton.getLastLocation(applicationContext)
         val ll: LatLng
-        if(l != null) {
-            ll = LatLng(l.latitude, l.longitude)
-        }
-        else {
-            ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
-        }
-        Log.i(applicationContext.packageName, "Set camera to last known location")
-        previousLatLng = ll
+        if(l != null) ll = LatLng(l.latitude, l.longitude)
+        else ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
         currentMarker!!.position = ll
+        if(previousLatLng != null) {
+            reconnectLineToMyLocation(previousLatLng!!, ll)
+        }
+        else previousLatLng = ll
         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
         animateCamera(ll, zoomLevel, 0.toFloat())
+        Log.i(applicationContext.packageName, "Set camera to last known location")
     }
 
     private fun animateCamera(myLocation: LatLng, zoom: Float, bearing: Float) {
@@ -538,37 +555,73 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     private fun removeLineDependency(position: LatLng) {
-        for(item in lineList) {
-            item.points.filter { it == position }.map { item.remove() }
+        val iterator = lineList.listIterator()
+
+        while(iterator.hasNext()) {
+            val index = iterator.nextIndex()
+            val item = iterator.next()
+            item.points.filter { it == position }.map {
+                item.remove()
+                iterator.remove()
+                lineDistanceList[index].remove()
+                lineDistanceList.removeAt(index)
+            }
         }
     }
 
-    private fun reconnectLineToMyLocation(previous: LatLng, current: LatLng) {
-        synchronized(this) {
-            for(item in lineList) {
-                var isConnected = false
-                var oppositePoint: LatLng? = null
-                Log.i("before", item.points.toString())
-                for(point in item.points) {
-                    if(point == previous) {
-                        // This line connected to my location
-                        isConnected = true
-                    }
-                    else {
-                        if(isConnected) oppositePoint = point
-                    }
-                }
+    private fun checkLineDuplication() {
 
-                if(isConnected) {
-                    item.remove()
-                    lineList.add(mMap.addPolyline(PolylineOptions()
-                            .clickable(true)
-                            .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
-                            .add(oppositePoint)
-                            .add(current)))
-                    Log.i("after", "${current.toString()}, ${oppositePoint.toString()}")
+    }
+
+    private fun reconnectLineToMyLocation(previous: LatLng, current: LatLng) {
+        for((index, item) in lineList.withIndex()) {
+            var isConnected = false
+            var oppositePoint: LatLng? = null
+
+            for(point in item.points) {
+                if(point == previous) {
+                    // This line connected to my location
+                    isConnected = true
+                }
+                else {
+                    oppositePoint = point
                 }
             }
+
+            if(isConnected) {
+                val array = ArrayList<LatLng>()
+                array.add(current)
+                array.add(oppositePoint!!)
+                item.points = array
+                lineDistanceList[index].position = getDistanceBetween(current, oppositePoint)
+                lineDistanceList[index].setIcon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(current, oppositePoint)))
+            }
         }
+
+        previousLatLng = current
+    }
+
+    private fun getDistanceBetween(start: LatLng, end: LatLng): LatLng {
+        val bounds = LatLngBounds.builder().include(start).include(end).build()
+        val startLocation = Location("start")
+        startLocation.latitude = start.latitude
+        startLocation.longitude = start.longitude
+        val endLocation = Location("end")
+        endLocation.latitude = end.latitude
+        endLocation.longitude = end.longitude
+
+        return bounds.center
+    }
+
+    private fun getDistanceIcon(start: LatLng, end: LatLng): Bitmap {
+        return IconGenerator(applicationContext)
+                .makeIcon(SphericalUtil.computeDistanceBetween(start, end).toInt().toString() + "m")
+    }
+
+    private fun controlDistanceMarker() {
+        if(zoomLevel > 15 && zoomLevel < 16) lineDistanceList.filter { it.snippet.toFloat() < 100f }.map { it.isVisible = false }
+        else if(zoomLevel > 14 && zoomLevel < 15f) lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
+        else if(zoomLevel > 13 && zoomLevel < 14f) lineDistanceList.filter { it.snippet.toFloat() < 300f }.map { it.isVisible = false }
+        else if(zoomLevel < 13f) lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = false }
     }
 }
