@@ -53,6 +53,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private var zoomLevel: Float = 17.0f
     private var currentLocation: Location? = null
+    private var previousLatLng: LatLng? = null
     private var interval: Long = 1000
     private var currentMarker: Marker? = null
     private var startMarkerLatLng: LatLng? = null
@@ -123,6 +124,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
 
                     val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
+                    if(previousLatLng != null) {
+                        reconnectLineToMyLocation(previousLatLng!!, myLocation)
+                    }
 
                     if((!isFirstScanned || isMyLocationEnabled) && !isCameraMoving) {
                         if(!isFirstScanned) {
@@ -376,6 +380,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
         }
         Log.i(applicationContext.packageName, "Set camera to last known location")
+        previousLatLng = ll
         currentMarker!!.position = ll
         address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
         animateCamera(ll, zoomLevel, 0.toFloat())
@@ -538,14 +543,31 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
     }
 
-    private fun reconnectLineToMyLocation(previous: LatLng) {
-        for(item in lineList) {
-            for(points in item.points) {
-                var pList = ArrayList<LatLng>()
-                if(points == previous) pList.add(currentMarker!!.position)
-                else pList.add(points)
+    private fun reconnectLineToMyLocation(previous: LatLng, current: LatLng) {
+        synchronized(this) {
+            for(item in lineList) {
+                var isConnected = false
+                var oppositePoint: LatLng? = null
+                Log.i("before", item.points.toString())
+                for(point in item.points) {
+                    if(point == previous) {
+                        // This line connected to my location
+                        isConnected = true
+                    }
+                    else {
+                        if(isConnected) oppositePoint = point
+                    }
+                }
 
-                item.points = pList
+                if(isConnected) {
+                    item.remove()
+                    lineList.add(mMap.addPolyline(PolylineOptions()
+                            .clickable(true)
+                            .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+                            .add(oppositePoint)
+                            .add(current)))
+                    Log.i("after", "${current.toString()}, ${oppositePoint.toString()}")
+                }
             }
         }
     }
