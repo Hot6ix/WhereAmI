@@ -30,6 +30,7 @@ public class FusedLocationSingleton {
     private static FusedLocationSingleton mInstance;
     private FusedLocationProviderClient mFusedLocationClient;
     private Location lastLocation;
+    private boolean isRunning = false;
 
     private FusedLocationSingleton(Context context) {
         initialize(context);

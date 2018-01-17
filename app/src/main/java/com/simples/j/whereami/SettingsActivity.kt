@@ -64,18 +64,14 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             addPreferencesFromResource(R.xml.pref_general)
             setHasOptionsMenu(true)
 
-            // Bind the summaries of EditText/List/Dialog/Ringtone preferences
-            // to their values. When their values change, their summaries are
-            // updated to reflect the new value, per the Android Design
-            // guidelines.
-            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_tracking_action_id)))
-            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
-                if(value is Boolean) {
-                    if(value) activity.startService(Intent(activity, TrackingService::class.java))
-                    else activity.stopService(Intent(activity, TrackingService::class.java))
-                }
-                true
-            }
+//            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_tracking_action_id)))
+//            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
+//                if(value is Boolean) {
+//                    if(value) activity.startService(Intent(activity, TrackingService::class.java))
+//                    else activity.stopService(Intent(activity, TrackingService::class.java))
+//                }
+//                true
+//            }
         }
 
         override fun onOptionsItemSelected(item: MenuItem): Boolean {

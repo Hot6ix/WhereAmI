@@ -7,35 +7,39 @@
             android:defaultValue="false"
             android:key="@string/pref_address_lock_id"
             android:title="@string/pref_address_lock_title"/>
-        <MultiSelectListPreference
-            android:key="@string/pref_share_option_id"
-            android:defaultValue="@array/pref_share_option_values_default"
-            android:dialogTitle="@string/pref_share_option_list_title"
-            android:entries="@array/pref_share_option_entries"
-            android:entryValues="@array/pref_share_option_values"
-            android:title="@string/pref_share_option_title" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:title="@string/pref_01_title" >
-
         <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/pref_tracking_id"
-            android:summary="@string/pref_description_enable_notification"
-            android:title="@string/pref_title_enable_notification_title" />
-
-        <ListPreference
-            android:key="@string/pref_tracking_action_id"
-            android:defaultValue="0"
-            android:dialogTitle="@string/pref_notification_action_list_title"
-            android:entries="@array/pref_tracking_action_entries"
-            android:entryValues="@array/pref_tracking_action_values"
-            android:title="@string/pref_notification_action_title"
-            android:dependency="@string/pref_tracking_id" />
+            android:defaultValue="true"
+            android:key="@string/pref_show_distance_id"
+            android:title="@string/pref_show_distance_title"/>
+        <!--<MultiSelectListPreference-->
+            <!--android:key="@string/pref_share_option_id"-->
+            <!--android:defaultValue="@array/pref_share_option_values_default"-->
+            <!--android:dialogTitle="@string/pref_share_option_list_title"-->
+            <!--android:entries="@array/pref_share_option_entries"-->
+            <!--android:entryValues="@array/pref_share_option_values"-->
+            <!--android:title="@string/pref_share_option_title" />-->
 
     </PreferenceCategory>
+
+    <!--<PreferenceCategory-->
+        <!--android:title="@string/pref_01_title" >-->
+
+        <!--<SwitchPreference-->
+            <!--android:defaultValue="false"-->
+            <!--android:key="@string/pref_tracking_id"-->
+            <!--android:summary="@string/pref_description_enable_notification"-->
+            <!--android:title="@string/pref_title_enable_notification_title" />-->
+
+        <!--<ListPreference-->
+            <!--android:key="@string/pref_tracking_action_id"-->
+            <!--android:defaultValue="0"-->
+            <!--android:dialogTitle="@string/pref_notification_action_list_title"-->
+            <!--android:entries="@array/pref_tracking_action_entries"-->
+            <!--android:entryValues="@array/pref_tracking_action_values"-->
+            <!--android:title="@string/pref_notification_action_title"-->
+            <!--android:dependency="@string/pref_tracking_id" />-->
+
+    <!--</PreferenceCategory>-->
 
     <PreferenceCategory
         android:title="@string/pref_02_title" >

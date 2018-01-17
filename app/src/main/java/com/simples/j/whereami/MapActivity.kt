@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
+import android.os.Environment
 import android.preference.PreferenceManager
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
@@ -33,8 +34,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.SphericalUtil
+import com.google.maps.android.kml.KmlLayer
 import com.google.maps.android.ui.IconGenerator
 import kotlinx.android.synthetic.main.activity_map.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.text.DateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -60,9 +66,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var startMarkerLatLng: LatLng? = null
     private var endMarkerLatLng: LatLng? = null
 
-    private var isFirstScanned = false
-    private var isMyLocationEnabled = true
+    private var isMyLocationEnabled = false
     private var isAddressViewLocked = false
+    private var isShowDistanceEnabled = true
     private var isCameraMoving = false
     private var isLinkMode = false
     private var isUnlinkMode = false
@@ -77,8 +83,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var lineDistanceList: ArrayList<Marker> = ArrayList()
     private var selectedMarker: Marker? = null
 
-    private var requestCount = 0
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
@@ -88,8 +92,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mapFragment.getMapAsync(this)
 
         // Request permission
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE)
         }
         infoView.post { infoViewWidth = infoView.measuredWidth }
 
@@ -127,12 +131,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
                     val myLocation = LatLng(locationResult.lastLocation.latitude, locationResult.lastLocation.longitude)
 
-                    if((!isFirstScanned || isMyLocationEnabled) && !isCameraMoving) {
-                        if(!isFirstScanned) {
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, zoomLevel))
-                            isFirstScanned = true
-                        }
-                        else animateCamera(myLocation, zoomLevel, 0.toFloat())
+                    if(isMyLocationEnabled && !isCameraMoving) {
+                        animateCamera(myLocation, zoomLevel, 0.toFloat())
 
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
@@ -153,22 +153,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onResume() {
         super.onResume()
-        mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
         isAddressViewLocked = sharedPref.getBoolean(resources.getString(R.string.pref_address_lock_id), false)
         if(isAddressViewLocked) {
             if(isInfoViewCollapsed) {
                 expandInfoView()
             }
         }
+        isShowDistanceEnabled = sharedPref.getBoolean(resources.getString(R.string.pref_show_distance_id), true)
+        if(isShowDistanceEnabled) lineDistanceList.filter { !it.isVisible }.map { it.isVisible = true }
+        else lineDistanceList.filter { it.isVisible }.map { it.isVisible = false }
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onStop() {
+        super.onStop()
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+
         mMap.setOnCameraIdleListener(this)
         mMap.setOnCameraMoveStartedListener(this)
         mMap.setOnMapLongClickListener(this)
@@ -182,11 +185,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         isCameraMoving = false
         zoomLevel = mMap.cameraPosition.zoom
         Log.i("zzoommmmm", zoomLevel.toString())
+
     }
 
     override fun onCameraMoveStarted(reason: Int) {
         isCameraMoving = true
-//        controlDistanceMarker()
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 isMyLocationEnabled = false
@@ -229,11 +232,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
             if(startMarkerLatLng != endMarkerLatLng) {
                 val distanceMarker = mMap.addMarker(MarkerOptions()
-                        .position(getDistanceBetween(startMarkerLatLng!!, endMarkerLatLng!!))
+                        .position(getCenterOfDistance(startMarkerLatLng!!, endMarkerLatLng!!))
                         .icon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(startMarkerLatLng!!, endMarkerLatLng!!))))
                 distanceMarker.tag = "DISTANCE"
                 distanceMarker.showInfoWindow()
                 distanceMarker.snippet = SphericalUtil.computeDistanceBetween(startMarkerLatLng!!, endMarkerLatLng!!).toString()
+                distanceMarker.isVisible = isShowDistanceEnabled
                 lineDistanceList.add(distanceMarker)
 
                 lineList.add(mMap.addPolyline(PolylineOptions()
@@ -269,6 +273,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         isMyLocationEnabled = !isMyLocationEnabled
                         updateMyLocationButtonImage()
                         if(isMyLocationEnabled) {
+                            mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
                             selectedMarker = currentMarker
                             if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                             if(!isAddressViewLocked) {
@@ -292,14 +297,19 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     switchMenuLayout(!isMenuLayoutExpanded)
                 }
                 R.id.item_clearAll -> {
-                    markerList.filter { it.position != currentMarker!!.position }.map { it.remove() }
-                    markerList.removeAll { it.position != currentMarker!!.position }
+//                    markerList.filter { it.position != currentMarker!!.position }.map { it.remove() }
+//                    markerList.removeAll { it.position != currentMarker!!.position }
+                    markerList.map { it.remove() }
+                    markerList.clear()
                     lineList.map { it.remove() }
                     lineList.clear()
                     lineDistanceList.map { it.remove() }
                     lineDistanceList.clear()
+                    currentMarker = null
+                    isMyLocationEnabled = false
                     isLinkMode = false
                     isUnlinkMode = false
+                    updateMyLocationButtonImage()
                     updateLinkButtonImage()
                     updateUnlinkButtonImage()
                     switchMarkerOption(false)
@@ -326,41 +336,46 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-
+                    var inputStream = FileInputStream(File("${Environment.getExternalStorageDirectory()}${File.separator}KakaoTalkDownload${File.separator}A.kml.xml"))
+                    var layer = KmlLayer(mMap, inputStream, applicationContext)
+                    layer.addLayerToMap()
                 }
                 R.id.marker_delete -> {
-                    if(selectedMarker!!.id == currentMarker!!.id) {
-                        Toast.makeText(applicationContext, "My location marker cannot be deleted.", Toast.LENGTH_SHORT).show()
+                    if(currentMarker != null) {
+                        if(selectedMarker!!.id == currentMarker!!.id) {
+                            isMyLocationEnabled = false
+                            currentMarker = null
+                        }
                     }
-                    else {
-                        removeLineDependency(selectedMarker!!.position)
-                        markerList.single { it.id == selectedMarker!!.id }.remove()
-                        markerList.remove(markerList.single { it.id == selectedMarker!!.id })
-                        isLinkMode = false
-                        isUnlinkMode = false
-                        updateLinkButtonImage()
-                        updateUnlinkButtonImage()
-                        switchMarkerOption(false)
-                    }
+//                    else {}
+                    removeLineDependency(selectedMarker!!.position)
+                    markerList.single { it.id == selectedMarker!!.id }.remove()
+                    markerList.remove(markerList.single { it.id == selectedMarker!!.id })
+                    isLinkMode = false
+                    isUnlinkMode = false
+                    updateMyLocationButtonImage()
+                    updateLinkButtonImage()
+                    updateUnlinkButtonImage()
+                    switchMarkerOption(false)
                 }
                 R.id.marker_unlink -> {
                     isUnlinkMode = !isUnlinkMode
                     if(isUnlinkMode) {
                         isLinkMode = false
                         updateLinkButtonImage()
+                        Toast.makeText(applicationContext, "Select line to remove.", Toast.LENGTH_SHORT).show()
                     }
                     updateUnlinkButtonImage()
-                    Toast.makeText(applicationContext, "Select line to remove", Toast.LENGTH_SHORT).show()
                 }
                 R.id.marker_link -> {
                     isLinkMode = !isLinkMode
                     if(isLinkMode) {
                         isUnlinkMode = false
                         updateUnlinkButtonImage()
+                        Toast.makeText(applicationContext, "Select another marker to connect.", Toast.LENGTH_SHORT).show()
                     }
                     startMarkerLatLng = selectedMarker!!.position
                     updateLinkButtonImage()
-                    Toast.makeText(applicationContext, "Select other marker", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -372,16 +387,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         when(requestCode) {
             PERMISSION_REQUEST_CODE -> {
                 if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    isMyLocationEnabled = true
                     if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                     mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
+                    if(isInfoViewCollapsed) expandInfoView()
+                    updateMyLocationButtonImage()
                 }
                 else {
-                    // Permiision denied
-                    if(requestCount < 2) {
-                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
-                        requestCount++
-                    }
-                    else Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
+                    collapseInfoView()
                 }
                 return
             }
@@ -390,17 +404,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     private fun setLastLocation() {
         val l: Location? = mFusedLocationSingleton.getLastLocation(applicationContext)
-        val ll: LatLng
+        var ll: LatLng? = null
         if(l != null) ll = LatLng(l.latitude, l.longitude)
-        else ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
-        currentMarker!!.position = ll
-        if(previousLatLng != null) {
-            reconnectLineToMyLocation(previousLatLng!!, ll)
+        else if(currentLocation != null) ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
+
+        if(ll != null) {
+            if(currentMarker != null) currentMarker!!.position = ll
+            else {
+                currentMarker = mMap.addMarker(MarkerOptions().position(ll))
+                markerList.add(currentMarker!!)
+            }
+
+            if(previousLatLng != null) {
+                reconnectLineToMyLocation(previousLatLng!!, ll)
+            }
+            else previousLatLng = ll
+            address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
+            animateCamera(ll, zoomLevel, 0.toFloat())
+            Log.i(applicationContext.packageName, "Set camera to last known location")
         }
-        else previousLatLng = ll
-        address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
-        animateCamera(ll, zoomLevel, 0.toFloat())
-        Log.i(applicationContext.packageName, "Set camera to last known location")
     }
 
     private fun animateCamera(myLocation: LatLng, zoom: Float, bearing: Float) {
@@ -450,11 +472,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             constraintSet.clear(menu_item_markers.id, ConstraintSet.BOTTOM)
             constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_clearAll.id, ConstraintSet.BOTTOM, 30)
             // Share
-            constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
+//            constraintSet.clear(menu_item_share.id, ConstraintSet.BOTTOM)
+//            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
             // Setting
             constraintSet.clear(menu_item_setting.id, ConstraintSet.BOTTOM)
-            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_share.id, ConstraintSet.BOTTOM, 30)
+            constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_markers.id, ConstraintSet.BOTTOM, 30)
 
             item_more.setImageDrawable(getDrawable(R.drawable.ic_action_clear))
         }
@@ -468,9 +490,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             constraintSet.connect(menu_item_markers.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
             constraintSet.connect(menu_item_markers.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // Share
-            constraintSet.clear(menu_item_share.id, ConstraintSet.TOP)
-            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
-            constraintSet.connect(menu_item_share.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
+//            constraintSet.clear(menu_item_share.id, ConstraintSet.TOP)
+//            constraintSet.connect(menu_item_share.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
+//            constraintSet.connect(menu_item_share.id, ConstraintSet.BOTTOM, menu_item_more.id, ConstraintSet.BOTTOM)
             // Setting
             constraintSet.clear(menu_item_setting.id, ConstraintSet.TOP)
             constraintSet.connect(menu_item_setting.id, ConstraintSet.TOP, menu_item_more.id, ConstraintSet.TOP)
@@ -569,10 +591,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
     }
 
-    private fun checkLineDuplication() {
-
-    }
-
     private fun reconnectLineToMyLocation(previous: LatLng, current: LatLng) {
         for((index, item) in lineList.withIndex()) {
             var isConnected = false
@@ -593,7 +611,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 array.add(current)
                 array.add(oppositePoint!!)
                 item.points = array
-                lineDistanceList[index].position = getDistanceBetween(current, oppositePoint)
+                lineDistanceList[index].position = getCenterOfDistance(current, oppositePoint)
                 lineDistanceList[index].setIcon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(current, oppositePoint)))
             }
         }
@@ -601,7 +619,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         previousLatLng = current
     }
 
-    private fun getDistanceBetween(start: LatLng, end: LatLng): LatLng {
+    private fun getCenterOfDistance(start: LatLng, end: LatLng): LatLng {
         val bounds = LatLngBounds.builder().include(start).include(end).build()
         val startLocation = Location("start")
         startLocation.latitude = start.latitude
@@ -613,22 +631,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         return bounds.center
     }
 
-    private fun getDistanceIcon(start: LatLng, end: LatLng): Bitmap {
-        return IconGenerator(applicationContext)
-                .makeIcon(SphericalUtil.computeDistanceBetween(start, end).toInt().toString() + "m")
+    private fun getDistanceBetween(start: LatLng, end: LatLng): String {
+        val distance = SphericalUtil.computeDistanceBetween(start, end)
+        if(distance >= 1000) return "%.2fkm".format(distance * 0.001)
+        else return distance.toInt().toString() + "m"
     }
 
-    private fun controlDistanceMarker() {
-        if(zoomLevel < 14) {
-            lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = false }
-        }
-        else if(zoomLevel < 15) {
-            lineDistanceList.filter { it.snippet.toFloat() < 500f }.map { it.isVisible = true }
-            lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
-        }
-        else if(zoomLevel < 16) {
-            lineDistanceList.filter { it.snippet.toFloat() < 200f }.map { it.isVisible = false }
-            lineDistanceList.filter { it.snippet.toFloat() < 100f }.map { it.isVisible = false }
-        }
+    private fun getDistanceIcon(start: LatLng, end: LatLng): Bitmap {
+        return IconGenerator(applicationContext).makeIcon(getDistanceBetween(start, end))
     }
 }
