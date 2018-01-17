@@ -93,7 +93,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         // Request permission
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE)
         }
         infoView.post { infoViewWidth = infoView.measuredWidth }
 
@@ -336,9 +336,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-                    var inputStream = FileInputStream(File("${Environment.getExternalStorageDirectory()}${File.separator}KakaoTalkDownload${File.separator}A.kml.xml"))
-                    var layer = KmlLayer(mMap, inputStream, applicationContext)
-                    layer.addLayerToMap()
+//                    var inputStream = FileInputStream(File("${Environment.getExternalStorageDirectory()}${File.separator}KakaoTalkDownload${File.separator}A.kml.xml"))
+//                    var layer = KmlLayer(mMap, inputStream, applicationContext)
+//                    layer.addLayerToMap()
+
+                    var test = KmlSerializer(applicationContext, markerList, lineList).serialize()
                 }
                 R.id.marker_delete -> {
                     if(currentMarker != null) {
