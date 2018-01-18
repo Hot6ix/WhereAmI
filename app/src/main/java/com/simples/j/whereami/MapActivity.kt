@@ -99,8 +99,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         item_markers.setOnClickListener(this)
         item_share.setOnClickListener(this)
         item_setting.setOnClickListener(this)
-        marker_delete.setOnClickListener(this)
-        marker_unlink.setOnClickListener(this)
+        marker_customize.setOnClickListener(this)
         marker_link.setOnClickListener(this)
         updateMyLocationButtonImage()
 
@@ -374,6 +373,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                     updateLinkButtonImage()
                 }
+                R.id.marker_customize -> {
+                    selectedMarker!!.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                }
             }
         }
     }
@@ -503,15 +505,22 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val constraintSet = ConstraintSet()
         constraintSet.clone(main_layout)
         if(switch) {
-            // Link marker
+            // Link
             constraintSet.clear(marker_item_link.id, ConstraintSet.START)
             constraintSet.connect(marker_item_link.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.START, 30)
+            // Customize
+            constraintSet.clear(marker_item_customize.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_customize.id, ConstraintSet.END, marker_item_link.id, ConstraintSet.START, 30)
         }
         else {
-            // Link marker
+            // Link
             constraintSet.clear(marker_item_link.id, ConstraintSet.END)
             constraintSet.connect(marker_item_link.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
             constraintSet.connect(marker_item_link.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.END)
+            // Customize
+            constraintSet.clear(marker_item_customize.id, ConstraintSet.END)
+            constraintSet.connect(marker_item_customize.id, ConstraintSet.START, menu_item_more.id, ConstraintSet.START)
+            constraintSet.connect(marker_item_customize.id, ConstraintSet.END, menu_item_more.id, ConstraintSet.END)
         }
         val transition = AutoTransition()
         transition.duration = MENU_EXPAND_DURATION
