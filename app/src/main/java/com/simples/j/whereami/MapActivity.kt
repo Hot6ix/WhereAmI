@@ -35,16 +35,16 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.ui.IconGenerator
 import kotlinx.android.synthetic.main.activity_map.*
-import java.text.DateFormat
-import java.util.*
-import kotlin.collections.ArrayList
 
-private const val PERMISSION_REQUEST_CODE = 1
+private const val PERMISSION_REQUEST_CODE_LOCATION = 1
+private const val PERMISSION_REQUEST_CODE_STORAGE = 2
 private const val DEFAULT_CAMERA_ZOOM = 15.0f
 private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1000
 private const val MENU_EXPAND_DURATION: Long = 250
-private const val LINE_NAME = "LINE"
+private const val LINE_NAME = "Line"
+private const val MARKER_NAME = "Marker"
+const val MY_LOCATION_NAME = "My Location"
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener, GoogleMap.OnPolygonClickListener,  View.OnClickListener {
 
@@ -60,7 +60,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var interval: Long = 1000
     private var currentMarker: Marker? = null
     private var tempLine: Polyline? = null
-    private var lineNumber = 0
+    private var lineNumber = 1
+    private var markerNumber = 1
 
     private var isMyLocationEnabled = false
     private var isAddressViewLocked = false
@@ -87,11 +88,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val mapFragment = supportFragmentManager
                 .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-
-        // Request permission
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE)
-        }
         infoView.post { infoViewWidth = infoView.measuredWidth }
 
         myLocation.setOnClickListener(this)
@@ -131,15 +127,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
+                            currentMarker!!.tag = MY_LOCATION_NAME
                             markerList.add(currentMarker!!)
+                            selectedMarker = currentMarker
                         }
                         currentMarker!!.position = myLocation
-                        address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, myLocation)
-
-//                        if(previousLatLng != null) {
-//                            reconnectLineToMyLocation(previousLatLng!!, myLocation)
-//                        }
-//                        else previousLatLng = myLocation
+                        address.text = currentMarker!!.tag.toString()
                     }
                 }
             }
@@ -190,7 +183,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 disableMyLocation()
                 if(!isAddressViewLocked) {
-                    if(!isInfoViewCollapsed && !isLinkMode && !isDeleteMode) {
+                    if(!isInfoViewCollapsed && !isLinkMode) {
                         collapseInfoView()
                     }
                 }
@@ -205,9 +198,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onMapLongClick(point: LatLng) {
-        markerList.add(mMap.addMarker(MarkerOptions()
+        val marker = mMap.addMarker(MarkerOptions()
                 .position(point)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))))
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)))
+        marker.tag = MARKER_NAME + " ${markerNumber++}"
+        markerList.add(marker)
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -216,7 +211,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             disableMyLocation()
         }
         if(!isAddressViewLocked) {
-            if(isInfoViewCollapsed){
+            if(isInfoViewCollapsed && !isDeleteMode){
                 expandInfoView()
             }
         }
@@ -230,10 +225,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             }
             markerList.single { it.id == selectedMarker!!.id }.remove()
             markerList.remove(markerList.single { it.id == selectedMarker!!.id })
+            collapseInfoView()
             return true
         }
         else {
-            address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
+//            address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
+            address.text = selectedMarker!!.tag.toString()
             if(!isMarkerOptionExpanded) switchMarkerOption(true)
         }
         if(isLinkMode) {
@@ -272,6 +269,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     lineList.remove(tempLine!!)
 
                     currentMarker = null
+                    collapseInfoView()
                     isLinkMode = false
                     updateLinkButtonImage()
                     switchMarkerOption(false)
@@ -310,7 +308,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             when (view.id) {
                 R.id.myLocation -> {
                     if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
+                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE_LOCATION)
                     }
                     else {
                         isMyLocationEnabled = !isMyLocationEnabled
@@ -332,7 +330,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 R.id.address -> {
-                    animateCamera(selectedMarker!!.position, zoomLevel, mMap.cameraPosition.bearing)
+                    val intent = Intent(this, DetailActivity::class.java)
+                    intent.putExtra(DetailActivity.MARKER, selectedMarker!!.id)
+                    startActivity(intent)
                 }
                 R.id.item_more -> {
                     switchMenuLayout(!isMenuLayoutExpanded)
@@ -389,7 +389,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                                 .clickable(true)
                                 .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
                                 .add(selectedMarker!!.position))
-                        tempLine!!.tag = LINE_NAME + "${lineNumber++}"
+                        tempLine!!.tag = LINE_NAME + " ${lineNumber++}"
                         lineList.add(tempLine!!)
                     }
                     updateLinkButtonImage()
@@ -405,7 +405,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         when(requestCode) {
-            PERMISSION_REQUEST_CODE -> {
+            PERMISSION_REQUEST_CODE_LOCATION -> {
                 if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     isMyLocationEnabled = true
                     if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
@@ -418,6 +418,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     collapseInfoView()
                 }
                 return
+            }
+            PERMISSION_REQUEST_CODE_STORAGE -> {
+
             }
         }
     }
@@ -435,11 +438,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 markerList.add(currentMarker!!)
             }
 
-//            if(previousLatLng != null) {
-//                reconnectLineToMyLocation(previousLatLng!!, ll)
-//            }
-//            else previousLatLng = ll
-            address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, ll)
+            currentMarker!!.tag = MY_LOCATION_NAME
+            address.text = currentMarker!!.tag.toString()
             animateCamera(ll, zoomLevel, 0.toFloat())
             Log.i(applicationContext.packageName, "Set camera to last known location")
         }
