@@ -15,9 +15,6 @@
     <string name="pref_01_title">Notification</string>
     <string name="pref_02_title">Others</string>
 
-    <!-- Lock Address View -->
-    <string name="pref_address_lock_id">ADDRESS_LOCK</string>
-    <string name="pref_address_lock_title">Lock address view</string>
     <!-- Show Distance -->
     <string name="pref_show_distance_id">SHOW_DISTANCE</string>
     <string name="pref_show_distance_title">Show distance between two point</string>
@@ -28,7 +25,7 @@
     <string name="pref_share_option_list_title">Share option</string>
 
     <string-array name="pref_share_option_entries">
-        <item>Addres</item>
+        <item>Address</item>
         <item>Coordinate</item>
         <item>Date</item>
     </string-array>

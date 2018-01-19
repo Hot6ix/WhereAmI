@@ -64,7 +64,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var markerNumber = 1
 
     private var isMyLocationEnabled = false
-    private var isAddressViewLocked = false
     private var isShowDistanceEnabled = true
     private var isCameraMoving = false
     private var isLinkMode = false
@@ -141,12 +140,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onResume() {
         super.onResume()
-        isAddressViewLocked = sharedPref.getBoolean(resources.getString(R.string.pref_address_lock_id), false)
-        if(isAddressViewLocked) {
-            if(isInfoViewCollapsed) {
-                expandInfoView()
-            }
-        }
         isShowDistanceEnabled = sharedPref.getBoolean(resources.getString(R.string.pref_show_distance_id), true)
         if(isShowDistanceEnabled) lineDistanceList.filter { !it.isVisible }.map { it.isVisible = true }
         else lineDistanceList.filter { it.isVisible }.map { it.isVisible = false }
@@ -182,11 +175,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         when (reason) {
             GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE -> {
                 disableMyLocation()
-                if(!isAddressViewLocked) {
-                    if(!isInfoViewCollapsed && !isLinkMode) {
-                        collapseInfoView()
-                    }
-                }
                 if(!isDeleteMode){
                     if(isMenuLayoutExpanded) switchMenuLayout(false)
                 }
@@ -211,11 +199,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(marker != currentMarker) {
             disableMyLocation()
         }
-        if(!isAddressViewLocked) {
-            if(isInfoViewCollapsed && !isDeleteMode){
-                expandInfoView()
-            }
-        }
+        if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
         selectedMarker = marker
         if(isDeleteMode) {
             if(currentMarker != null) {
@@ -319,11 +303,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                             mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
                             selectedMarker = currentMarker
                             if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
-                            if(!isAddressViewLocked) {
-                                if(isInfoViewCollapsed) {
-                                    expandInfoView()
-                                }
-                            }
+                            if(isInfoViewCollapsed) expandInfoView()
                             isLinkMode = false
                             updateLinkButtonImage()
                             if(!isMarkerOptionExpanded) switchMarkerOption(true)

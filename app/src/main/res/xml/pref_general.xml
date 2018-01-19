@@ -2,11 +2,7 @@
 
     <PreferenceCategory
         android:title="@string/pref_00_title">
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/pref_address_lock_id"
-            android:title="@string/pref_address_lock_title"/>
+        
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_show_distance_id"
