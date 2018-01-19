@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import android.util.Log
 import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.Polyline
 import org.xmlpull.v1.XmlPullParserFactory
 import org.xmlpull.v1.XmlSerializer
@@ -15,11 +16,12 @@ import java.io.StringWriter
  * Created by james on 2018-01-17.
  *
  */
-class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayList<Polyline>) {
+class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayList<Polyline>, polygons: ArrayList<Polygon>) {
 
     private var context: Context = context
     private var markerList: ArrayList<Marker> = markers
     private var lineList: ArrayList<Polyline> = lines
+    private var polygonList: ArrayList<Polygon> = polygons
 
     fun serialize() {
         val serializer = XmlPullParserFactory.newInstance().newSerializer()
@@ -72,6 +74,9 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
             serializer.endTag(null, "coordinates")
             serializer.endTag(null, "LineString")
             serializer.endTag(null, "Placemark")
+        }
+        for(item in polygonList) {
+
         }
         serializer.endTag(null, "Folder")
         // End contents
