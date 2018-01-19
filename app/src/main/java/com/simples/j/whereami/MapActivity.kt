@@ -203,6 +203,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)))
         marker.tag = MARKER_NAME + " ${markerNumber++}"
         markerList.add(marker)
+        Log.i("awefwefewfewwefew", "Marker created : ${marker.id}, ${marker.tag.toString()}")
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -223,8 +224,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     disableMyLocation()
                 }
             }
-            markerList.single { it.id == selectedMarker!!.id }.remove()
-            markerList.remove(markerList.single { it.id == selectedMarker!!.id })
+            markerList.single { it == selectedMarker }.remove()
+            markerList.remove(markerList.single { it == selectedMarker })
             collapseInfoView()
             return true
         }
