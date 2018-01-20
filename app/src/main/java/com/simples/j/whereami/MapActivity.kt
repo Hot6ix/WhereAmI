@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
+import android.os.Parcelable
 import android.preference.PreferenceManager
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
@@ -35,6 +36,7 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.ui.IconGenerator
 import kotlinx.android.synthetic.main.activity_map.*
+import java.util.*
 
 private const val PERMISSION_REQUEST_CODE_LOCATION = 1
 private const val PERMISSION_REQUEST_CODE_STORAGE = 2
@@ -43,6 +45,7 @@ private const val MAX_CAMERA_ZOOM = 10.0f
 private const val ADDRESS_ANIM_DURATION: Long = 1000
 private const val MENU_EXPAND_DURATION: Long = 250
 private const val LINE_NAME = "Line"
+private const val POLYGON_NAME = "Polygon"
 private const val MARKER_NAME = "Marker"
 const val MY_LOCATION_NAME = "My Location"
 
@@ -61,6 +64,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var currentMarker: Marker? = null
     private var tempLine: Polyline? = null
     private var lineNumber = 1
+    private var polygonNumber = 1
     private var markerNumber = 1
 
     private var isMyLocationEnabled = false
@@ -78,7 +82,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var lineList: ArrayList<Polyline> = ArrayList()
     private var lineDistanceList: ArrayList<Marker> = ArrayList()
     private var polygonList: ArrayList<Polygon> = ArrayList()
-    private var selectedMarker: Marker? = null
+    private var selectedItem: Any? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +111,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
+        // Request permission
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE_STORAGE)
+        }
+
         locationCallback = object: LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
@@ -128,7 +137,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
                             currentMarker!!.tag = MY_LOCATION_NAME
                             markerList.add(currentMarker!!)
-                            selectedMarker = currentMarker
+                            selectedItem = currentMarker
                         }
                         currentMarker!!.position = myLocation
                         address.text = currentMarker!!.tag.toString()
@@ -191,38 +200,35 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)))
         marker.tag = MARKER_NAME + " ${markerNumber++}"
         markerList.add(marker)
-        Log.i("awefwefewfewwefew", "Marker created : ${marker.id}, ${marker.tag.toString()}")
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
+        selectedItem = marker
         if(marker.title == "DISTANCE") return true
-        if(marker != currentMarker) {
-            disableMyLocation()
-        }
+        if(marker != currentMarker) disableMyLocation()
         if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
-        selectedMarker = marker
+
         if(isDeleteMode) {
             if(currentMarker != null) {
-                if(selectedMarker!!.id == currentMarker!!.id) {
+                if(selectedItem == currentMarker) {
                     currentMarker = null
                     disableMyLocation()
                 }
             }
-            markerList.single { it == selectedMarker }.remove()
-            markerList.remove(markerList.single { it == selectedMarker })
+            markerList.single { it == selectedItem }.remove()
+            markerList.remove(markerList.single { it == selectedItem })
             collapseInfoView()
             return true
         }
         else {
-//            address.text = mFusedLocationSingleton.getAddressFromCoordinate(applicationContext, marker.position)
-            address.text = selectedMarker!!.tag.toString()
+            address.text = marker.tag.toString()
             if(!isMarkerOptionExpanded) switchMarkerOption(true)
         }
         if(isLinkMode) {
-            if(selectedMarker!!.position != previousLatLng) {
+            if(marker.position != previousLatLng) {
                 val distanceMarker = mMap.addMarker(MarkerOptions()
-                        .position(getCenterOfPoints(previousLatLng!!, selectedMarker!!.position))
-                        .icon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(previousLatLng!!, selectedMarker!!.position))))
+                        .position(getCenterOfPoints(arrayListOf(previousLatLng!!, marker.position)))
+                        .icon(BitmapDescriptorFactory.fromBitmap(getDistanceIcon(previousLatLng!!, marker.position))))
                 distanceMarker.title = "DISTANCE"
                 distanceMarker.tag = tempLine!!.tag
                 Log.i(distanceMarker.tag.toString(), tempLine!!.tag.toString())
@@ -230,16 +236,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 lineDistanceList.add(distanceMarker)
 
                 val list = tempLine!!.points
-                list.add(selectedMarker!!.position)
+                list.add(marker.position)
                 tempLine!!.points = list
                 previousLatLng = marker.position
                 // Polygon
-                if(selectedMarker!!.position == startLatLng) {
-                    val option = PolygonOptions()
+                if(marker.position == startLatLng) {
+                    val polygon = mMap.addPolygon(PolygonOptions()
                             .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
                             .clickable(true)
-                            .addAll(list)
-                    polygonList.add(mMap.addPolygon(option))
+                            .addAll(list))
+                    polygon.tag = POLYGON_NAME + " ${polygonNumber++}"
+                    polygonList.add(polygon)
+                    address.text = polygon.tag.toString()
+                    selectedItem = polygon
+
                     for(point in list) {
                         markerList.filter { point == it.position }.map {
                             it.remove()
@@ -254,7 +264,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     lineList.remove(tempLine!!)
 
                     currentMarker = null
-                    collapseInfoView()
                     isLinkMode = false
                     updateLinkButtonImage()
                     switchMarkerOption(false)
@@ -266,6 +275,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onPolylineClick(polyline: Polyline) {
+        selectedItem = polyline
         if(isDeleteMode) {
             lineList.filter { it == polyline }.map {
                 val tag = it.tag
@@ -277,14 +287,24 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 lineList.remove(polyline)
             }
         }
+        else {
+            address.text = polyline.tag.toString()
+            animateCamera(polyline.points[0],zoomLevel, mMap.cameraPosition.bearing)
+        }
     }
 
-    override fun onPolygonClick(polygon: Polygon?) {
+    override fun onPolygonClick(polygon: Polygon) {
+        selectedItem = polygon
         if(isDeleteMode) {
             polygonList.filter { it == polygon }.map {
                 it.remove()
                 polygonList.remove(polygon)
             }
+            collapseInfoView()
+        }
+        else {
+            address.text = polygon.tag.toString()
+            animateCamera(getCenterOfPoints(polygon.points),zoomLevel, mMap.cameraPosition.bearing)
         }
     }
 
@@ -301,7 +321,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         updateMyLocationButtonImage()
                         if(isMyLocationEnabled) {
                             mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
-                            selectedMarker = currentMarker
+                            selectedItem = currentMarker
                             if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
                             if(isInfoViewCollapsed) expandInfoView()
                             isLinkMode = false
@@ -311,9 +331,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 R.id.address -> {
-                    val intent = Intent(this, DetailActivity::class.java)
-                    intent.putExtra(DetailActivity.MARKER, selectedMarker!!.id)
-                    startActivity(intent)
+                    if(selectedItem is Marker) {
+                        animateCamera((selectedItem as Marker).position, zoomLevel, mMap.cameraPosition.bearing)
+                        if(!isMarkerOptionExpanded) switchMarkerOption(true)
+                    }
+                    if(selectedItem is Polygon) animateCamera(getCenterOfPoints((selectedItem as Polygon).points), zoomLevel, mMap.cameraPosition.bearing)
                 }
                 R.id.item_more -> {
                     switchMenuLayout(!isMenuLayoutExpanded)
@@ -364,19 +386,21 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         updateDeleteButtonImage()
                         Toast.makeText(applicationContext, "Select another marker to connect.", Toast.LENGTH_SHORT).show()
 
-                        startLatLng = selectedMarker!!.position
-                        previousLatLng = selectedMarker!!.position
+                        startLatLng = (selectedItem as Marker).position
+                        previousLatLng = (selectedItem as Marker).position
                         tempLine = mMap.addPolyline(PolylineOptions()
                                 .clickable(true)
                                 .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
-                                .add(selectedMarker!!.position))
+                                .add((selectedItem as Marker).position))
                         tempLine!!.tag = LINE_NAME + " ${lineNumber++}"
                         lineList.add(tempLine!!)
                     }
                     updateLinkButtonImage()
                 }
                 R.id.marker_customize -> {
-                    selectedMarker!!.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                    val intent = Intent(this, DetailActivity::class.java)
+                    intent.putExtra(DetailActivity.MARKER, (selectedItem as Marker).id)
+                    startActivity(intent)
                 }
             }
         }
@@ -401,7 +425,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 return
             }
             PERMISSION_REQUEST_CODE_STORAGE -> {
-
+                if(grantResults.isNotEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
             }
         }
     }
@@ -426,9 +453,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
     }
 
-    private fun animateCamera(myLocation: LatLng, zoom: Float, bearing: Float) {
+    private fun animateCamera(location: LatLng, zoom: Float, bearing: Float) {
         val cam = CameraPosition.builder()
-                .target(myLocation)
+                .target(location)
                 .zoom(zoom)
                 .bearing(bearing)
                 .build()
@@ -563,16 +590,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
     }
 
-    private fun getCenterOfPoints(start: LatLng, end: LatLng): LatLng {
-        val bounds = LatLngBounds.builder().include(start).include(end).build()
-        val startLocation = Location("start")
-        startLocation.latitude = start.latitude
-        startLocation.longitude = start.longitude
-        val endLocation = Location("end")
-        endLocation.latitude = end.latitude
-        endLocation.longitude = end.longitude
-
-        return bounds.center
+    private fun getCenterOfPoints(points: List<LatLng>): LatLng {
+        val bounds = LatLngBounds.builder()
+        for(item in points) {
+            bounds.include(item)
+        }
+        return bounds.build().center
     }
 
     private fun getDistanceBetween(start: LatLng, end: LatLng): String {

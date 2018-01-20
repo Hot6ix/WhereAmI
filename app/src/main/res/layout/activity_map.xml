@@ -200,7 +200,7 @@
             android:contentDescription="@android:string/untitled"
             android:padding="10dp"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_action_delete_dark" />
+            android:src="@drawable/ic_action_edit" />
 
     </android.support.v7.widget.CardView>
 
