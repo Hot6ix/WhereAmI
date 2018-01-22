@@ -55,6 +55,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private lateinit var mFusedLocationSingleton: FusedLocationSingleton
     private lateinit var locationCallback: LocationCallback
     private lateinit var sharedPref: SharedPreferences
+    private lateinit var kmlManager: KmlManager
 
     private var zoomLevel: Float = 17.0f
     private var currentLocation: Location? = null
@@ -110,6 +111,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         // Get services
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        kmlManager = KmlManager(applicationContext)
 
         // Request permission
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -149,6 +151,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onResume() {
         super.onResume()
+
         isShowDistanceEnabled = sharedPref.getBoolean(resources.getString(R.string.pref_show_distance_id), true)
         if(isShowDistanceEnabled) lineDistanceList.filter { !it.isVisible }.map { it.isVisible = true }
         else lineDistanceList.filter { it.isVisible }.map { it.isVisible = false }
@@ -157,6 +160,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     override fun onStop() {
         super.onStop()
         mFusedLocationSingleton.disableLocationUpdate(locationCallback)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(markerList, lineList, polygonList)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -170,6 +178,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setOnPolygonClickListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
+
+        kmlManager.loadKmlFromExternal(mMap)
     }
 
     override fun onCameraIdle() {
@@ -196,6 +206,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onMapLongClick(point: LatLng) {
         val marker = mMap.addMarker(MarkerOptions()
+                .draggable(true)
                 .position(point)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)))
         marker.tag = MARKER_NAME + " ${markerNumber++}"
@@ -373,11 +384,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     startActivity(Intent(this, SettingsActivity::class.java))
                 }
                 R.id.item_markers -> {
-//                    var inputStream = FileInputStream(File("${Environment.getExternalStorageDirectory()}${File.separator}KakaoTalkDownload${File.separator}A.kml.xml"))
-//                    var layer = KmlLayer(mMap, inputStream, applicationContext)
-//                    layer.addLayerToMap()
 
-                    KmlSerializer(applicationContext, markerList, lineList, polygonList).serialize()
                 }
                 R.id.marker_link -> {
                     isLinkMode = !isLinkMode

@@ -18,17 +18,15 @@ import java.io.StringWriter
  */
 class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayList<Polyline>, polygons: ArrayList<Polygon>) {
 
-    private var context: Context = context
     private var markerList: ArrayList<Marker> = markers
     private var lineList: ArrayList<Polyline> = lines
     private var polygonList: ArrayList<Polygon> = polygons
 
-    fun serialize() {
+    fun serialize(output: FileOutputStream) {
         val serializer = XmlPullParserFactory.newInstance().newSerializer()
-        val write = StringWriter()
 
-        serializer.setOutput(write)
-        serializer.startDocument("UTF-8", false);
+        serializer.setOutput(output.bufferedWriter())
+        serializer.startDocument("UTF-8", true);
         serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
         serializer.startTag(null, "kml")
         serializer.attribute(null, "xmlns", "http://www.opengis.net/kml/2.2")
@@ -66,7 +64,7 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
             serializer.endTag(null, "name")
             serializer.startTag(null, "LineString")
             serializer.startTag(null, "coordinates")
-            var points = StringBuilder()
+            val points = StringBuilder()
             for(point in item.points) {
                 points.append("${point.longitude},${point.latitude},0\n")
             }
@@ -85,7 +83,7 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         serializer.endDocument()
 
         serializer.flush()
-        Log.i("tagggg", write.toString())
+        output.close()
     }
 
 }
