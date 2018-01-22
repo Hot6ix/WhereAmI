@@ -4,12 +4,9 @@ import android.content.Context
 import android.os.Environment
 import android.util.Log
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.Polygon
-import com.google.android.gms.maps.model.Polyline
-import com.google.maps.android.kml.KmlContainer
-import com.google.maps.android.kml.KmlLayer
-import com.google.maps.android.kml.KmlPlacemark
+import com.google.android.gms.maps.model.*
+import com.google.maps.android.data.kml.KmlContainer
+import com.google.maps.android.data.kml.KmlLayer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -18,7 +15,16 @@ import java.io.FileOutputStream
  * Created by james on 2018-01-20.
  *
  */
-class KmlManager(var context: Context) {
+
+private const val TYPE_POINT = "Point"
+private const val TYPE_LINE = "LineString"
+private const val TYPE_POLYGON = "Polygon"
+
+class KmlManager(var context: Context, googleMap: GoogleMap) {
+
+    private var map = googleMap
+    var a = false
+    var style: KmlContainer? = null
 
     fun checkStorageState(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
@@ -31,28 +37,39 @@ class KmlManager(var context: Context) {
         KmlSerializer(context, markers, lines, polygons).serialize(output)
     }
 
-    fun loadKmlFromExternal(googleMap: GoogleMap) {
+    fun loadKmlFromExternal() {
         val file = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOCUMENTS), "a.kml")
         if(file.exists()) {
             val inputStream = FileInputStream(file)
-            val layer = KmlLayer(googleMap, inputStream, context)
+            val layer = KmlLayer(map, inputStream, context)
             layer.addLayerToMap()
-
             a(layer.containers)
         }
     }
 
-    private fun a(main: Iterable<KmlContainer>): ArrayList<KmlPlacemark> {
-        val list = ArrayList<KmlPlacemark>()
+    private fun a(main: Iterable<KmlContainer>) {
         for(item in main) {
-//            list.addAll(item.placemarks)
-            item.placemarks.map { Log.e("aaaaaaaaaa", it.properties.toString()) }
-            item.placemarks.map { Log.e("zzzzzzzzzz", it.geometry.toString()) }
+            if(!a) {
+                style = item
+                a = true
+                Log.e("main", style.toString())
+            }
+            if(item.hasPlacemarks()) {
+                item.placemarks.map {
+                    Log.e("name", it.properties.toString())
+                    Log.e("style-id", it.styleId)
+                    if(it.styleId.contains("normal"))
+                        Log.e("style", style!!.getStyle(it.styleId).toString())
+                    else
+                        Log.e("style", style!!.getStyle(it.styleId + "-normal").toString())
+                    Log.e("geometryType", it.geometry.geometryType)
+                    Log.e("geometryObject", it.geometry.geometryObject.toString())
+                }
+            }
 
             if(item.hasContainers()) a(item.containers)
         }
 
-        return list
     }
 }

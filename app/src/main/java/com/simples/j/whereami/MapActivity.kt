@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
-import android.os.Parcelable
 import android.preference.PreferenceManager
 import android.support.constraint.ConstraintSet
 import android.support.v4.app.ActivityCompat
@@ -37,6 +36,7 @@ import com.google.maps.android.SphericalUtil
 import com.google.maps.android.ui.IconGenerator
 import kotlinx.android.synthetic.main.activity_map.*
 import java.util.*
+import kotlin.collections.ArrayList
 
 private const val PERMISSION_REQUEST_CODE_LOCATION = 1
 private const val PERMISSION_REQUEST_CODE_STORAGE = 2
@@ -79,7 +79,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isMarkerOptionExpanded = false
     private var infoViewWidth = 0
 
-    private var markerList: ArrayList<Marker> = ArrayList()
+    private var markerList: ArrayList<MarkerItem> = ArrayList()
     private var lineList: ArrayList<Polyline> = ArrayList()
     private var lineDistanceList: ArrayList<Marker> = ArrayList()
     private var polygonList: ArrayList<Polygon> = ArrayList()
@@ -111,7 +111,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         // Get services
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        kmlManager = KmlManager(applicationContext)
 
         // Request permission
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -138,7 +137,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
                             currentMarker!!.tag = MY_LOCATION_NAME
-                            markerList.add(currentMarker!!)
+                            markerList.add(MarkerItem(currentMarker!!, BitmapDescriptorFactory.HUE_RED))
                             selectedItem = currentMarker
                         }
                         currentMarker!!.position = myLocation
@@ -164,7 +163,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onDestroy() {
         super.onDestroy()
-        if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(markerList, lineList, polygonList)
+//        if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(markerList, lineList, polygonList)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -179,7 +178,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
 
-        kmlManager.loadKmlFromExternal(mMap)
+//        kmlManager = KmlManager(applicationContext, mMap)
+//        kmlManager.loadKmlFromExternal()
     }
 
     override fun onCameraIdle() {
@@ -208,9 +208,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         val marker = mMap.addMarker(MarkerOptions()
                 .draggable(true)
                 .position(point)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)))
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
         marker.tag = MARKER_NAME + " ${markerNumber++}"
-        markerList.add(marker)
+        markerList.add(MarkerItem(currentMarker!!, BitmapDescriptorFactory.HUE_RED))
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -226,9 +226,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     disableMyLocation()
                 }
             }
-            markerList.single { it == selectedItem }.remove()
+            markerList.single { it.marker == selectedItem }.marker.remove()
             markerList.remove(markerList.single { it == selectedItem })
-            collapseInfoView()
+            if(!isInfoViewCollapsed) collapseInfoView()
+            if(!isMarkerOptionExpanded) switchMarkerOption(false)
             return true
         }
         else {
@@ -262,8 +263,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     selectedItem = polygon
 
                     for(point in list) {
-                        markerList.filter { point == it.position }.map {
-                            it.remove()
+                        markerList.filter { point == it.marker.position }.map {
+                            it.marker.remove()
                             markerList.remove(it)
                         }
                     }
@@ -450,7 +451,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             if(currentMarker != null) currentMarker!!.position = ll
             else {
                 currentMarker = mMap.addMarker(MarkerOptions().position(ll))
-                markerList.add(currentMarker!!)
+                markerList.add(MarkerItem(currentMarker!!, BitmapDescriptorFactory.HUE_RED))
             }
 
             currentMarker!!.tag = MY_LOCATION_NAME
