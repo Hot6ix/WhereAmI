@@ -33,57 +33,44 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
         KmlSerializer(context, markers, lines, polygons).serialize(output)
     }
 
-    fun loadKmlFromExternal() {
+    fun loadKmlFromExternal(): Boolean {
         val file = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOCUMENTS), "a.kml")
         if(file.exists()) {
             val inputStream = FileInputStream(file)
             placemarkList = KmlParser().parse(inputStream)
             addItemsToMap()
+            return true
         }
+        return false
     }
 
     private fun addItemsToMap() {
         for(item in placemarkList!!) {
             when(item.type) {
                 KmlPlacemark.TYPE_POINT -> {
-                    val point = item.coordinates.split(",")
                     val marker = googleMap.addMarker(MarkerOptions()
                             .draggable(true)
-                            .position(LatLng(point[1].toDouble(), point[0].toDouble()))
+                            .position(item.coordinates[0])
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)))
                     marker.tag = item.name
                     markerList.add(marker)
                 }
                 KmlPlacemark.TYPE_LINE -> {
-                    val points = item.coordinates.split("\n")
-                    val pointList = ArrayList<LatLng>()
-                    points.map {
-                        val a = it.split(",")
-                        if(a.size > 2)
-                            pointList.add(LatLng(a[1].toDouble(), a[0].toDouble()))
-                    }
 
                     val line = googleMap.addPolyline(PolylineOptions()
                             .clickable(true)
                             .color(ContextCompat.getColor(context, R.color.colorPrimary))
-                            .addAll(pointList))
+                            .addAll(item.coordinates))
                     line.tag = item.name
                     lineList.add(line)
                 }
                 KmlPlacemark.TYPE_POLYGON -> {
-                    val points = item.coordinates.split(" ")
-                    val pointList = ArrayList<LatLng>()
-                    points.map {
-                        val a = it.split(",")
-                        if(a.size > 2)
-                            pointList.add(LatLng(a[1].toDouble(), a[0].toDouble()))
-                    }
 
                     val polygon = googleMap.addPolygon(PolygonOptions()
                             .fillColor(ContextCompat.getColor(context, R.color.colorPrimary))
                             .clickable(true)
-                            .addAll(pointList))
+                            .addAll(item.coordinates))
                     polygon.tag = item.name
                     polygonList.add(polygon)
                 }

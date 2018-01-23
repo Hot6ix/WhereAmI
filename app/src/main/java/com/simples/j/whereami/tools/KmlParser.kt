@@ -2,6 +2,7 @@ package com.simples.j.whereami.tools
 
 import android.util.Log
 import android.util.Xml
+import com.google.android.gms.maps.model.LatLng
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
 import org.xmlpull.v1.XmlPullParser
@@ -39,7 +40,7 @@ class KmlParser {
                     var name = ""
                     var description = ""
                     var styleUrl = ""
-                    var points = ""
+                    val pointList = ArrayList<LatLng>()
                     var type = ""
                     while(subIndex < children.length) { // items of Placemark
                         if(children.item(subIndex).nodeType != Node.TEXT_NODE) {
@@ -47,49 +48,32 @@ class KmlParser {
                                 "name" -> name = children.item(subIndex).firstChild.nodeValue
                                 "description" -> description = children.item(subIndex).firstChild.nodeValue
                                 "styleUrl" -> styleUrl = children.item(subIndex).firstChild.nodeValue
-                                "Point", "LineString", "Polygon" -> {
+                                "Point" -> {
                                     type = children.item(subIndex).nodeName
-                                    points = coordinateTags.item(index).firstChild.nodeValue
+                                    val split = coordinateTags.item(index).firstChild.nodeValue.split(",")
+                                    pointList.add(LatLng(split[1].toDouble(), split[0].toDouble()))
+                                }
+                                "LineString", "Polygon" -> {
+                                    type = children.item(subIndex).nodeName
+                                    val split = coordinateTags.item(index).firstChild.nodeValue.split("\n")
+                                    split.map {
+                                        val subSplit = it.split(",")
+                                        if(subSplit.size > 2) pointList.add(LatLng(subSplit[1].toDouble(), subSplit[0].toDouble()))
+                                    }
+
                                 }
                             }
                         }
                         subIndex++
                     }
-                    list.add(KmlPlacemark(name, description, styleUrl, points, type))
+
+                    list.add(KmlPlacemark(name, description, styleUrl, pointList, type))
                 }
                 index++
             }
         }
 
         return list
-    }
-
-    private fun getChildNode(node: Node, coordinates: NodeList) {
-        var list = ArrayList<KmlPlacemark>()
-        val children = node.childNodes
-        var index = 0
-
-        var name = ""
-        var description = ""
-        var styleUrl = ""
-        var points = ""
-        var type = ""
-        while(index < children.length) {
-            if(children.item(index).nodeType != Node.TEXT_NODE) {
-                when(children.item(index).nodeName) {
-                    "name" -> name = children.item(index).firstChild.nodeValue
-                    "description" -> description = children.item(index).firstChild.nodeValue
-                    "styleUrl" -> styleUrl = children.item(index).firstChild.nodeValue
-                    "Point", "LineString", "Polygon" -> {
-                        type = children.item(index).nodeName
-                        points = coordinates.item(index).firstChild.nodeValue
-                    }
-                }
-            }
-            index++
-        }
-        list.add(KmlPlacemark(name, description, styleUrl, points, type))
-        Log.d(a, KmlPlacemark(name, description, styleUrl, points, type).toString())
     }
 
 }

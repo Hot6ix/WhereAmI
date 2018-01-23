@@ -178,12 +178,23 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setPadding(0, 80, 0, 330)
 
         kmlManager = KmlManager(applicationContext, mMap)
-        kmlManager.loadKmlFromExternal()
+        if(kmlManager.loadKmlFromExternal()) {
+            markerList = kmlManager.markerList
+            lineList = kmlManager.lineList
+            polygonList = kmlManager.polygonList
+
+            val allItemPoints = ArrayList<LatLng>()
+            kmlManager.placemarkList!!.map {
+                allItemPoints.addAll(it.coordinates)
+            }
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(getCenterOfPoints(allItemPoints), 12f))
+        }
     }
 
     override fun onCameraIdle() {
         isCameraMoving = false
-        zoomLevel = mMap.cameraPosition.zoom
+        if(mMap.cameraPosition.zoom <= 17)
+            zoomLevel = mMap.cameraPosition.zoom
         Log.i("zzoommmmm", zoomLevel.toString())
     }
 
