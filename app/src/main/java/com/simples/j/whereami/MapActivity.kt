@@ -34,8 +34,8 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.ui.IconGenerator
+import com.simples.j.whereami.tools.KmlManager
 import kotlinx.android.synthetic.main.activity_map.*
-import java.util.*
 import kotlin.collections.ArrayList
 
 private const val PERMISSION_REQUEST_CODE_LOCATION = 1
@@ -178,15 +178,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.setPadding(0, 80, 0, 330)
 
-//        kmlManager = KmlManager(applicationContext, mMap)
-//        kmlManager.loadKmlFromExternal()
+        kmlManager = KmlManager(applicationContext, mMap)
+        kmlManager.loadKmlFromExternal()
     }
 
     override fun onCameraIdle() {
         isCameraMoving = false
         zoomLevel = mMap.cameraPosition.zoom
         Log.i("zzoommmmm", zoomLevel.toString())
-
     }
 
     override fun onCameraMoveStarted(reason: Int) {

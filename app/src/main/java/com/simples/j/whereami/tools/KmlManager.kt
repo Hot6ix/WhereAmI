@@ -1,4 +1,4 @@
-package com.simples.j.whereami
+package com.simples.j.whereami.tools
 
 import android.content.Context
 import android.os.Environment
@@ -6,7 +6,6 @@ import android.util.Log
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.data.kml.KmlContainer
-import com.google.maps.android.data.kml.KmlLayer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -42,9 +41,10 @@ class KmlManager(var context: Context, googleMap: GoogleMap) {
                 Environment.DIRECTORY_DOCUMENTS), "a.kml")
         if(file.exists()) {
             val inputStream = FileInputStream(file)
-            val layer = KmlLayer(map, inputStream, context)
-            layer.addLayerToMap()
-            a(layer.containers)
+            KmlParser().parse(inputStream)
+//            val layer = KmlLayer(map, inputStream, context)
+//            layer.addLayerToMap()
+//            a(layer.containers)
         }
     }
 
@@ -57,6 +57,7 @@ class KmlManager(var context: Context, googleMap: GoogleMap) {
             }
             if(item.hasPlacemarks()) {
                 item.placemarks.map {
+
                     Log.e("name", it.properties.toString())
                     Log.e("style-id", it.styleId)
                     if(it.styleId.contains("normal"))

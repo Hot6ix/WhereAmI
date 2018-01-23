@@ -1,16 +1,11 @@
-package com.simples.j.whereami
+package com.simples.j.whereami.tools
 
 import android.content.Context
-import android.os.Environment
-import android.util.Log
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.Polyline
 import org.xmlpull.v1.XmlPullParserFactory
-import org.xmlpull.v1.XmlSerializer
-import java.io.File
 import java.io.FileOutputStream
-import java.io.StringWriter
 
 /**
  * Created by james on 2018-01-17.
