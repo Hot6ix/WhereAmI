@@ -1,4 +1,4 @@
-package com.simples.j.whereami
+package com.simples.j.whereami.tools
 
 import com.google.android.gms.maps.model.Marker
 

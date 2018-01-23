@@ -2,10 +2,10 @@ package com.simples.j.whereami.tools
 
 import android.content.Context
 import android.os.Environment
-import android.util.Log
+import android.support.v4.content.ContextCompat
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
-import com.google.maps.android.data.kml.KmlContainer
+import com.simples.j.whereami.R
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -15,15 +15,12 @@ import java.io.FileOutputStream
  *
  */
 
-private const val TYPE_POINT = "Point"
-private const val TYPE_LINE = "LineString"
-private const val TYPE_POLYGON = "Polygon"
+class KmlManager(private var context: Context, private var googleMap: GoogleMap) {
 
-class KmlManager(var context: Context, googleMap: GoogleMap) {
-
-    private var map = googleMap
-    var a = false
-    var style: KmlContainer? = null
+    var placemarkList: ArrayList<KmlPlacemark>? = null
+    var markerList: ArrayList<Marker> = ArrayList()
+    var lineList: ArrayList<Polyline> = ArrayList()
+    var polygonList: ArrayList<Polygon> = ArrayList()
 
     fun checkStorageState(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
@@ -41,36 +38,56 @@ class KmlManager(var context: Context, googleMap: GoogleMap) {
                 Environment.DIRECTORY_DOCUMENTS), "a.kml")
         if(file.exists()) {
             val inputStream = FileInputStream(file)
-            KmlParser().parse(inputStream)
-//            val layer = KmlLayer(map, inputStream, context)
-//            layer.addLayerToMap()
-//            a(layer.containers)
+            placemarkList = KmlParser().parse(inputStream)
+            addItemsToMap()
         }
     }
 
-    private fun a(main: Iterable<KmlContainer>) {
-        for(item in main) {
-            if(!a) {
-                style = item
-                a = true
-                Log.e("main", style.toString())
-            }
-            if(item.hasPlacemarks()) {
-                item.placemarks.map {
+    private fun addItemsToMap() {
+        for(item in placemarkList!!) {
+            when(item.type) {
+                KmlPlacemark.TYPE_POINT -> {
+                    val point = item.coordinates.split(",")
+                    val marker = googleMap.addMarker(MarkerOptions()
+                            .draggable(true)
+                            .position(LatLng(point[1].toDouble(), point[0].toDouble()))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)))
+                    marker.tag = item.name
+                    markerList.add(marker)
+                }
+                KmlPlacemark.TYPE_LINE -> {
+                    val points = item.coordinates.split("\n")
+                    val pointList = ArrayList<LatLng>()
+                    points.map {
+                        val a = it.split(",")
+                        if(a.size > 2)
+                            pointList.add(LatLng(a[1].toDouble(), a[0].toDouble()))
+                    }
 
-                    Log.e("name", it.properties.toString())
-                    Log.e("style-id", it.styleId)
-                    if(it.styleId.contains("normal"))
-                        Log.e("style", style!!.getStyle(it.styleId).toString())
-                    else
-                        Log.e("style", style!!.getStyle(it.styleId + "-normal").toString())
-                    Log.e("geometryType", it.geometry.geometryType)
-                    Log.e("geometryObject", it.geometry.geometryObject.toString())
+                    val line = googleMap.addPolyline(PolylineOptions()
+                            .clickable(true)
+                            .color(ContextCompat.getColor(context, R.color.colorPrimary))
+                            .addAll(pointList))
+                    line.tag = item.name
+                    lineList.add(line)
+                }
+                KmlPlacemark.TYPE_POLYGON -> {
+                    val points = item.coordinates.split(" ")
+                    val pointList = ArrayList<LatLng>()
+                    points.map {
+                        val a = it.split(",")
+                        if(a.size > 2)
+                            pointList.add(LatLng(a[1].toDouble(), a[0].toDouble()))
+                    }
+
+                    val polygon = googleMap.addPolygon(PolygonOptions()
+                            .fillColor(ContextCompat.getColor(context, R.color.colorPrimary))
+                            .clickable(true)
+                            .addAll(pointList))
+                    polygon.tag = item.name
+                    polygonList.add(polygon)
                 }
             }
-
-            if(item.hasContainers()) a(item.containers)
         }
-
     }
 }
