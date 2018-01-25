@@ -1,21 +1,14 @@
 package com.simples.j.whereami.tools
 
-import android.util.Log
-import android.util.Xml
 import com.google.android.gms.maps.model.LatLng
 import org.w3c.dom.Node
-import org.w3c.dom.NodeList
-import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
-import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Created by james on 2018-01-22.
  *
  */
-
-private const val a = "TAG"
 
 class KmlParser {
 

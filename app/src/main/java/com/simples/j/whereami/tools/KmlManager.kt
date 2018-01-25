@@ -20,7 +20,9 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
     var placemarkList: ArrayList<KmlPlacemark>? = null
     var markerList: ArrayList<Marker> = ArrayList()
     var lineList: ArrayList<Polyline> = ArrayList()
+    var lineDistanceList: ArrayList<Marker> = ArrayList()
     var polygonList: ArrayList<Polygon> = ArrayList()
+    var polygonAreaList: ArrayList<Marker> = ArrayList()
 
     fun checkStorageState(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
@@ -64,6 +66,17 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                             .addAll(item.coordinates))
                     line.tag = item.name
                     lineList.add(line)
+
+                    item.coordinates.mapIndexed { index, latLng ->
+                        if(index+1 < item.coordinates.size) {
+                            val distanceMarker = googleMap.addMarker(MarkerOptions()
+                                    .position(Utils.getCenterOfPoints(arrayListOf(latLng, item.coordinates[index+1])))
+                                    .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDistanceIcon(latLng, item.coordinates[index+1], context))))
+                            distanceMarker.title = "DISTANCE"
+                            distanceMarker.tag = line.id
+                            lineDistanceList.add(distanceMarker)
+                        }
+                    }
                 }
                 KmlPlacemark.TYPE_POLYGON -> {
 
@@ -73,6 +86,13 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                             .addAll(item.coordinates))
                     polygon.tag = item.name
                     polygonList.add(polygon)
+
+                    val areaMarker = googleMap.addMarker(MarkerOptions()
+                            .position(Utils.getCenterOfPoints(item.coordinates))
+                            .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(item.coordinates, context))))
+                    areaMarker.title = "AREA"
+                    areaMarker.tag = polygon.id
+                    polygonAreaList.add(areaMarker)
                 }
             }
         }

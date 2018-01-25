@@ -21,7 +21,7 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         val serializer = XmlPullParserFactory.newInstance().newSerializer()
 
         serializer.setOutput(output.bufferedWriter())
-        serializer.startDocument("UTF-8", true);
+        serializer.startDocument("UTF-8", true)
         serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
         serializer.startTag(null, "kml")
         serializer.attribute(null, "xmlns", "http://www.opengis.net/kml/2.2")
@@ -43,7 +43,7 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         for(item in markerList) {
             serializer.startTag(null, "Placemark")
             serializer.startTag(null, "name")
-            serializer.text("")
+            serializer.text(item.tag.toString())
             serializer.endTag(null, "name")
             serializer.startTag(null, "Point")
             serializer.startTag(null, "coordinates")
@@ -55,7 +55,7 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         for(item in lineList) {
             serializer.startTag(null, "Placemark")
             serializer.startTag(null, "name")
-            serializer.text("")
+            serializer.text(item.tag.toString())
             serializer.endTag(null, "name")
             serializer.startTag(null, "LineString")
             serializer.startTag(null, "coordinates")
@@ -70,6 +70,24 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         }
         for(item in polygonList) {
 
+            serializer.startTag(null, "Placemark")
+            serializer.startTag(null, "name")
+            serializer.text(item.tag.toString())
+            serializer.endTag(null, "name")
+            serializer.startTag(null, "Polygon")
+            serializer.startTag(null, "outerBoundaryIs")
+            serializer.startTag(null, "LinearRing")
+            serializer.startTag(null, "coordinates")
+            val points = StringBuilder()
+            for(point in item.points) {
+                points.append("${point.longitude},${point.latitude},0\n")
+            }
+            serializer.text(points.toString())
+            serializer.endTag(null, "coordinates")
+            serializer.endTag(null, "LinearRing")
+            serializer.endTag(null, "outerBoundaryIs")
+            serializer.endTag(null, "Polygon")
+            serializer.endTag(null, "Placemark")
         }
         serializer.endTag(null, "Folder")
         // End contents
