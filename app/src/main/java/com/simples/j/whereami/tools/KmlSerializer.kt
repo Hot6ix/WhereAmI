@@ -11,11 +11,9 @@ import java.io.FileOutputStream
  * Created by james on 2018-01-17.
  *
  */
-class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayList<Polyline>, polygons: ArrayList<Polygon>) {
+class KmlSerializer(context: Context, items: ArrayList<Any>) {
 
-    private var markerList: ArrayList<Marker> = markers
-    private var lineList: ArrayList<Polyline> = lines
-    private var polygonList: ArrayList<Polygon> = polygons
+    private var items: ArrayList<Any> = items
 
     fun serialize(output: FileOutputStream) {
         val serializer = XmlPullParserFactory.newInstance().newSerializer()
@@ -40,54 +38,55 @@ class KmlSerializer(context: Context, markers: ArrayList<Marker>, lines: ArrayLi
         serializer.text("")
         serializer.endTag(null, "name")
         // Objects
-        for(item in markerList) {
-            serializer.startTag(null, "Placemark")
-            serializer.startTag(null, "name")
-            serializer.text(item.tag.toString())
-            serializer.endTag(null, "name")
-            serializer.startTag(null, "Point")
-            serializer.startTag(null, "coordinates")
-            serializer.text("${item.position.longitude},${item.position.latitude},0")
-            serializer.endTag(null, "coordinates")
-            serializer.endTag(null, "Point")
-            serializer.endTag(null, "Placemark")
-        }
-        for(item in lineList) {
-            serializer.startTag(null, "Placemark")
-            serializer.startTag(null, "name")
-            serializer.text(item.tag.toString())
-            serializer.endTag(null, "name")
-            serializer.startTag(null, "LineString")
-            serializer.startTag(null, "coordinates")
-            val points = StringBuilder()
-            for(point in item.points) {
-                points.append("${point.longitude},${point.latitude},0\n")
+        for(item in items) {
+            if(item is Marker) {
+                serializer.startTag(null, "Placemark")
+                serializer.startTag(null, "name")
+                serializer.text(item.tag.toString())
+                serializer.endTag(null, "name")
+                serializer.startTag(null, "Point")
+                serializer.startTag(null, "coordinates")
+                serializer.text("${item.position.longitude},${item.position.latitude},0")
+                serializer.endTag(null, "coordinates")
+                serializer.endTag(null, "Point")
+                serializer.endTag(null, "Placemark")
             }
-            serializer.text(points.toString())
-            serializer.endTag(null, "coordinates")
-            serializer.endTag(null, "LineString")
-            serializer.endTag(null, "Placemark")
-        }
-        for(item in polygonList) {
-
-            serializer.startTag(null, "Placemark")
-            serializer.startTag(null, "name")
-            serializer.text(item.tag.toString())
-            serializer.endTag(null, "name")
-            serializer.startTag(null, "Polygon")
-            serializer.startTag(null, "outerBoundaryIs")
-            serializer.startTag(null, "LinearRing")
-            serializer.startTag(null, "coordinates")
-            val points = StringBuilder()
-            for(point in item.points) {
-                points.append("${point.longitude},${point.latitude},0\n")
+            else if(item is Polyline) {
+                serializer.startTag(null, "Placemark")
+                serializer.startTag(null, "name")
+                serializer.text(item.tag.toString())
+                serializer.endTag(null, "name")
+                serializer.startTag(null, "LineString")
+                serializer.startTag(null, "coordinates")
+                val points = StringBuilder()
+                for(point in item.points) {
+                    points.append("${point.longitude},${point.latitude},0\n")
+                }
+                serializer.text(points.toString())
+                serializer.endTag(null, "coordinates")
+                serializer.endTag(null, "LineString")
+                serializer.endTag(null, "Placemark")
             }
-            serializer.text(points.toString())
-            serializer.endTag(null, "coordinates")
-            serializer.endTag(null, "LinearRing")
-            serializer.endTag(null, "outerBoundaryIs")
-            serializer.endTag(null, "Polygon")
-            serializer.endTag(null, "Placemark")
+            else if(item is Polygon) {
+                serializer.startTag(null, "Placemark")
+                serializer.startTag(null, "name")
+                serializer.text(item.tag.toString())
+                serializer.endTag(null, "name")
+                serializer.startTag(null, "Polygon")
+                serializer.startTag(null, "outerBoundaryIs")
+                serializer.startTag(null, "LinearRing")
+                serializer.startTag(null, "coordinates")
+                val points = StringBuilder()
+                for(point in item.points) {
+                    points.append("${point.longitude},${point.latitude},0\n")
+                }
+                serializer.text(points.toString())
+                serializer.endTag(null, "coordinates")
+                serializer.endTag(null, "LinearRing")
+                serializer.endTag(null, "outerBoundaryIs")
+                serializer.endTag(null, "Polygon")
+                serializer.endTag(null, "Placemark")
+            }
         }
         serializer.endTag(null, "Folder")
         // End contents

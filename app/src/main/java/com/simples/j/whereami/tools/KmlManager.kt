@@ -18,21 +18,19 @@ import java.io.FileOutputStream
 class KmlManager(private var context: Context, private var googleMap: GoogleMap) {
 
     var placemarkList: ArrayList<KmlPlacemark>? = null
-    var markerList: ArrayList<Marker> = ArrayList()
-    var lineList: ArrayList<Polyline> = ArrayList()
+    var itemList = ArrayList<Any>()
     var lineDistanceList: ArrayList<Marker> = ArrayList()
-    var polygonList: ArrayList<Polygon> = ArrayList()
     var polygonAreaList: ArrayList<Marker> = ArrayList()
 
     fun checkStorageState(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
     }
 
-    fun saveKmlToExternal(markers: ArrayList<Marker>, lines: ArrayList<Polyline>, polygons: ArrayList<Polygon>) {
+    fun saveKmlToExternal(items: ArrayList<Any>) {
         val file = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOCUMENTS), "a.kml")
         val output = FileOutputStream(file)
-        KmlSerializer(context, markers, lines, polygons).serialize(output)
+        KmlSerializer(context, items).serialize(output)
     }
 
     fun loadKmlFromExternal(): Boolean {
@@ -56,7 +54,7 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                             .position(item.coordinates[0])
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)))
                     marker.tag = item.name
-                    markerList.add(marker)
+                    itemList.add(marker)
                 }
                 KmlPlacemark.TYPE_LINE -> {
 
@@ -65,7 +63,7 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                             .color(ContextCompat.getColor(context, R.color.colorPrimary))
                             .addAll(item.coordinates))
                     line.tag = item.name
-                    lineList.add(line)
+                    itemList.add(line)
 
                     item.coordinates.mapIndexed { index, latLng ->
                         if(index+1 < item.coordinates.size) {
@@ -85,7 +83,7 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                             .clickable(true)
                             .addAll(item.coordinates))
                     polygon.tag = item.name
-                    polygonList.add(polygon)
+                    itemList.add(polygon)
 
                     val areaMarker = googleMap.addMarker(MarkerOptions()
                             .position(Utils.getCenterOfPoints(item.coordinates))
