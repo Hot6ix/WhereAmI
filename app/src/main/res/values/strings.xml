@@ -8,6 +8,7 @@
     <string name="from">from</string>
     <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
     <string name="admob_unit_id">ca-app-pub-1459869098528763/3874445882</string>
+    <string name="item_list_title">Items</string>
 
     <!-- Strings related to Settings -->
 

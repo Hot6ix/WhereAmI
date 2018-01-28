@@ -1,28 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_item_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="5dp"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:background="?android:attr/selectableItemBackground"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ImageView
         android:id="@+id/drawer_item_icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_action_undo"
+        android:scaleType="fitCenter"
         android:contentDescription="@null"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <TextView
         android:id="@+id/drawer_item_name"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
+        android:layout_marginStart="5dp"
         android:ellipsize="end"
+        android:gravity="start"
         android:maxLines="1"
-        android:padding="10dp"
         android:textSize="13sp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/drawer_item_icon" />
+        app:layout_constraintStart_toEndOf="@+id/drawer_item_icon"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
