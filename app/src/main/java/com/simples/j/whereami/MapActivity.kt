@@ -402,6 +402,35 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             }
             isLinkMode -> {
                 if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
+                    itemList.map {
+                        val item = it.item
+                        when(item) {
+                            is Polyline -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(it.coordinates[0], zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                            is Polygon -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(Utils.getPointsBound(it.coordinates).center, zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                        }
+                    }
+                    isLinkMode = false
+                    updateLinkButtonState()
+                    if(isMarkerOptionExpanded) switchMarkerOption(false)
+                    return true
+                }
+                selectedItem = marker
+                itemList.filter { it.item == marker }.map { setAddressName(it.name) }
+                if(!isMarkerOptionExpanded) switchMarkerOption(true)
+
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
                     isLinkMode = false
                     updateLinkButtonState()
                 }
@@ -466,34 +495,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
                         isLinkMode = false
                         updateLinkButtonState()
-                        switchMarkerOption(false)
+                        if(isMarkerOptionExpanded) switchMarkerOption(false)
                     }
                 }
             }
             else -> {
-                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
-                    itemList.map {
-                        val item = it.item
-                        when(item) {
-                            is Polyline -> {
-                                if(item.id == marker.tag) {
-                                    selectedItem = item
-                                    setAddressName(it.name)
-                                    animateCamera(it.coordinates[0], zoomLevel, mMap.cameraPosition.bearing)
-                                }
-                            }
-                            is Polygon -> {
-                                if(item.id == marker.tag) {
-                                    selectedItem = item
-                                    setAddressName(it.name)
-                                    animateCamera(Utils.getPointsBound(it.coordinates).center, zoomLevel, mMap.cameraPosition.bearing)
-                                }
-                            }
-                        }
-                    }
-                    if(isMarkerOptionExpanded) switchMarkerOption(false)
-                    return true
-                }
                 selectedItem = marker
                 itemList.filter { it.item == marker }.map { setAddressName(it.name) }
                 if(!isMarkerOptionExpanded) switchMarkerOption(true)
