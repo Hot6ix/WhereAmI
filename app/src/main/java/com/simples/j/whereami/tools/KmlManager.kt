@@ -30,14 +30,14 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
 
     fun saveKmlToExternal(items: ArrayList<KmlPlacemark>) {
         val file = File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), "a.kml")
+                Environment.DIRECTORY_DOCUMENTS), "footprint.kml")
         val output = FileOutputStream(file)
         KmlSerializer(context, items).serialize(output)
     }
 
     fun loadKmlFromExternal(): Boolean {
         val file = File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), "a.kml")
+                Environment.DIRECTORY_DOCUMENTS), "footprint.kml")
         if(file.exists()) {
             val inputStream = FileInputStream(file)
             itemInfoList = KmlParser().parse(inputStream)
@@ -80,7 +80,7 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                 }
                 KmlPlacemark.TYPE_POLYGON -> {
                     val polygon = googleMap.addPolygon(PolygonOptions()
-                            .fillColor(ContextCompat.getColor(context, R.color.colorPrimary))
+                            .fillColor(ContextCompat.getColor(context, R.color.colorPrimary30))
                             .clickable(true)
                             .addAll(item.coordinates))
                     itemList.add(KmlPlacemark(polygon, item.name, item.description, item.styleUrl, item.coordinates, item.type))

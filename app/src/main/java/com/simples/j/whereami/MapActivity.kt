@@ -103,6 +103,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         adView.loadAd(AdRequest.Builder().build())
 
         // Get services
+        kmlManager = KmlManager(applicationContext, mMap)
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
@@ -262,8 +263,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.uiSettings.isMapToolbarEnabled = false
         mMap.setPadding(0, 250, 0, 0)
 
-        kmlManager = KmlManager(applicationContext, mMap)
-
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             if(kmlManager.loadKmlFromExternal()) {
                 itemList.addAll(kmlManager.itemList)
@@ -401,31 +400,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 return true
             }
             isLinkMode -> {
-                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
-                    itemList.map {
-                        val item = it.item
-                        when(item) {
-                            is Polyline -> {
-                                if(item.id == marker.tag) {
-                                    selectedItem = item
-                                    setAddressName(it.name)
-                                    animateCamera(it.coordinates[0], zoomLevel, mMap.cameraPosition.bearing)
-                                }
-                            }
-                            is Polygon -> {
-                                if(item.id == marker.tag) {
-                                    selectedItem = item
-                                    setAddressName(it.name)
-                                    animateCamera(Utils.getPointsBound(it.coordinates).center, zoomLevel, mMap.cameraPosition.bearing)
-                                }
-                            }
-                        }
-                    }
-                    isLinkMode = false
-                    updateLinkButtonState()
-                    if(isMarkerOptionExpanded) switchMarkerOption(false)
-                    return true
-                }
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) return true
                 selectedItem = marker
                 itemList.filter { it.item == marker }.map { setAddressName(it.name) }
                 if(!isMarkerOptionExpanded) switchMarkerOption(true)
@@ -464,7 +439,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if (marker.position == startLatLng) {
                         val name = getString(R.string.polygon_name) + " ${polygonIndex++}"
                         val polygon = mMap.addPolygon(PolygonOptions()
-                                .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+                                .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary30))
                                 .clickable(true)
                                 .addAll(list))
                         itemList.add(KmlPlacemark(polygon, name, null, null, list, KmlPlacemark.TYPE_POLYGON))
@@ -509,70 +484,64 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         return false
     }
 
-    override fun onMarkerDrag(p0: Marker?) {
-    }
+    override fun onMarkerDrag(p0: Marker?) {}
 
-    override fun onMarkerDragStart(p0: Marker?) {
-    }
+    override fun onMarkerDragStart(p0: Marker?) {}
 
     override fun onMarkerDragEnd(marker: Marker) {
         if(isLinkMode) selectedItem = marker
     }
 
     override fun onPolylineClick(polyline: Polyline) {
-        if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
-        if(isMarkerOptionExpanded) switchMarkerOption(false)
+        if(!isLinkMode) {
+            if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
+            if(isMarkerOptionExpanded) switchMarkerOption(false)
 
-        if(isDeleteMode) {
-            itemList.filter { it.item == polyline }.map {
-                val kmlItem = it.item as Polyline
-                lineDistanceList.filter { kmlItem.id == it.tag }.map {
-                    it.remove()
-                    lineDistanceList.remove(it)
+            if(isDeleteMode) {
+                itemList.filter { it.item == polyline }.map {
+                    val kmlItem = it.item as Polyline
+                    lineDistanceList.filter { kmlItem.id == it.tag }.map {
+                        it.remove()
+                        lineDistanceList.remove(it)
+                    }
+                    kmlItem.remove()
+                    itemList.remove(itemList.single { it.item == polyline })
                 }
-                kmlItem.remove()
-                itemList.remove(itemList.single { it.item == polyline })
+                if(selectedItem == polyline && !isInfoViewCollapsed) collapseInfoView()
             }
-            if(selectedItem == polyline && !isInfoViewCollapsed) collapseInfoView()
+            else {
+                selectedItem = polyline
+                itemList.filter { it.item == polyline }.map { setAddressName(it.name) }
+                animateCamera(polyline.points[0],zoomLevel, mMap.cameraPosition.bearing)
+            }
+            drawerListAdapter.notifyDataSetChanged()
         }
-        else {
-            selectedItem = polyline
-            itemList.filter { it.item == polyline }.map { setAddressName(it.name) }
-            animateCamera(polyline.points[0],zoomLevel, mMap.cameraPosition.bearing)
-        }
-        if(isLinkMode) {
-            isLinkMode = false
-            updateLinkButtonState()
-        }
-        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
-        if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
-        if(isMarkerOptionExpanded) switchMarkerOption(false)
+        if(!isLinkMode) {
+            if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
+            if(isMarkerOptionExpanded) switchMarkerOption(false)
 
-        if(isDeleteMode) {
-            itemList.filter { it.item == polygon }.map {
-                val kmlItem = it.item as Polygon
-                polygonAreaList.filter { kmlItem.id == it.tag }.map {
-                    it.remove()
-                    polygonAreaList.remove(it)
+            if(isDeleteMode) {
+                itemList.filter { it.item == polygon }.map {
+                    val kmlItem = it.item as Polygon
+                    polygonAreaList.filter { kmlItem.id == it.tag }.map {
+                        it.remove()
+                        polygonAreaList.remove(it)
+                    }
+                    kmlItem.remove()
+                    itemList.remove(itemList.single { it.item == polygon })
                 }
-                kmlItem.remove()
-                itemList.remove(itemList.single { it.item == polygon })
+                if(selectedItem == polygon && !isInfoViewCollapsed) collapseInfoView()
             }
-            if(selectedItem == polygon && !isInfoViewCollapsed) collapseInfoView()
+            else {
+                selectedItem = polygon
+                itemList.filter { it.item == polygon }.map { setAddressName(it.name) }
+                animateCamera(Utils.getPointsBound(polygon.points).center,zoomLevel, mMap.cameraPosition.bearing)
+            }
+            drawerListAdapter.notifyDataSetChanged()
         }
-        else {
-            selectedItem = polygon
-            itemList.filter { it.item == polygon }.map { setAddressName(it.name) }
-            animateCamera(Utils.getPointsBound(polygon.points).center,zoomLevel, mMap.cameraPosition.bearing)
-        }
-        if(isLinkMode) {
-            isLinkMode = false
-            updateLinkButtonState()
-        }
-        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onClick(view: View?) {

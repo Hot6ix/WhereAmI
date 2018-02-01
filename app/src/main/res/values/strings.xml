@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WhereAmI</string>
+    <string name="app_name">Footprint</string>
     <string name="title_activity_map">Map</string>
     <string name="menu_mylocatoin">My location</string>
     <string name="menu_share">Share</string>

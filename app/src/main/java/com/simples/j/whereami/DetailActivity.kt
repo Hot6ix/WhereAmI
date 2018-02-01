@@ -69,6 +69,7 @@ class DetailActivity : AppCompatActivity(), OnMapReadyCallback {
             }
             KmlPlacemark.TYPE_POLYGON -> {
                 googleMap.addPolygon(PolygonOptions()
+                        .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary30))
                         .addAll(item.coordinates))
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(Utils.getPointsBound(item.coordinates), display[0], mapHeight.toInt(), (display[0] * 0.1).toInt()))
                 detail_additional.text = Utils.getAreaOfPolygon(item.coordinates, applicationContext)
