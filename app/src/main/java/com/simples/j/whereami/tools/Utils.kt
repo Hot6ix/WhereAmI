@@ -3,7 +3,6 @@ package com.simples.j.whereami.tools
 import android.content.Context
 import android.graphics.Bitmap
 import android.preference.PreferenceManager
-import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
@@ -66,7 +65,7 @@ class Utils() {
                 MEASURE_HECTARE -> "%.2f hr".format(SphericalUtil.computeArea(points) * 0.0001)
                 MEASURE_ACRE -> "%.2f ac".format(SphericalUtil.computeArea(points) * 0.000247)
                 MEASURE_ARE -> "%.2f a".format(SphericalUtil.computeArea(points) * 0.01)
-                MEASURE_PYONG -> "%.2f pyong".format(SphericalUtil.computeArea(points) * 0.3025)
+                MEASURE_PYONG -> "%.2f ${context.getString(R.string.pyong)}".format(SphericalUtil.computeArea(points) * 0.3025)
                 else -> "%.2f m\u00B2".format(SphericalUtil.computeArea(points))
             }
         }

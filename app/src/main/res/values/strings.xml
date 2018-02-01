@@ -5,7 +5,6 @@
     <string name="menu_share">Share</string>
     <string name="menu_settings">Settings</string>
     <string name="send_to">Send my location to &#8230;</string>
-    <string name="from">from</string>
     <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
     <string name="admob_unit_id">ca-app-pub-1459869098528763/3874445882</string>
     <string name="item_list_title">Items</string>
@@ -14,6 +13,16 @@
     <string name="detail_save_title">Save</string>
     <string name="short_points_format">%1$.7f, %2$.7f</string>
     <string name="untitled">Untitled</string>
+    <string name="marker_name">Marker</string>
+    <string name="line_name">Line</string>
+    <string name="polygon_name">Polygon</string>
+    <string name="my_locatoin">My location</string>
+    <string name="pyong">pyong</string>
+
+    <!-- Toast message -->
+    <string name="delete_mode_message">Select item to remove.</string>
+    <string name="link_mode_message">Select another marker to connect.</string>
+    <string name="permission_message">Need permission for service.</string>
 
     <!-- Strings related to Settings -->
 
@@ -69,10 +78,13 @@
 
     <!-- etc -->
 
-    <string name="pref_about_title">About</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_version_id">VERSION</string>
+    <string name="pref_github_title">Open source - GitHub</string>
+    <string name="pref_github_id">GITHUB</string>
 
-    <string name="pref_about_id">ABOUT</string>
     <string name="title_activity_main">MainActivity</string>
-    <string name="title_activity_detail">DetailActivity</string>
+    <string name="title_activity_detail">Detail</string>
+    <string name="github_url">https://github.com/Hot6ix/WhereAmI</string>
 
 </resources>

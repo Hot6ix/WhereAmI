@@ -44,6 +44,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private lateinit var locationCallback: LocationCallback
     private lateinit var sharedPref: SharedPreferences
     private lateinit var kmlManager: KmlManager
+    private lateinit var drawerListAdapter: DrawerListAdapter
 
     private var currentLocation: Location? = null
     private var startLatLng: LatLng? = null
@@ -51,7 +52,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var currentMarker: Marker? = null
     private var tempLine: Polyline? = null
     private var selectedItem: Any? = null
-    private var drawerListAdapter: DrawerListAdapter? = null
 
     private var zoomLevel: Float = 17.0f
     private var interval: Long = 1000
@@ -111,6 +111,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSION_REQUEST_CODE_STORAGE)
         }
 
+        // Setup list
+        drawerListAdapter = DrawerListAdapter(itemList, applicationContext)
+        drawerListAdapter.setOnItemClickListener(this)
+        left_drawer.adapter = drawerListAdapter
+
         locationCallback = object: LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
@@ -128,14 +133,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
-                            itemList.add(KmlPlacemark(currentMarker!!, MY_LOCATION_NAME, null, null, arrayListOf(myLocation), KmlPlacemark.TYPE_POINT))
+                            itemList.add(KmlPlacemark(currentMarker!!, getString(R.string.my_locatoin), null, null, arrayListOf(myLocation), KmlPlacemark.TYPE_POINT))
                             selectedItem = currentMarker
                         }
                         else {
                             currentMarker!!.position = myLocation
                         }
                         itemList.filter { it.item == currentMarker }.map { setAddressName(it.name) }
-                        drawerListAdapter?.notifyDataSetChanged()
+                        drawerListAdapter.notifyDataSetChanged()
                     }
                 }
             }
@@ -163,7 +168,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                                 val distanceMarker = mMap.addMarker(MarkerOptions()
                                         .position(Utils.getPointsBound(arrayListOf(latLng, it.coordinates[index+1])).center)
                                         .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDistanceIcon(latLng, it.coordinates[index+1], applicationContext))))
-                                distanceMarker.title = "DISTANCE"
+                                distanceMarker.title = TAG_DISTANCE
                                 distanceMarker.tag = item.id
                                 lineDistanceList.add(distanceMarker)
                             }
@@ -183,7 +188,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         val areaMarker = mMap.addMarker(MarkerOptions()
                                 .position(Utils.getCenterOfPoints(it.coordinates))
                                 .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(it.coordinates, applicationContext))))
-                        areaMarker.title = "AREA"
+                        areaMarker.title = TAG_AREA
                         areaMarker.tag = item.id
                         polygonAreaList.add(areaMarker)
                     }
@@ -197,7 +202,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onStop() {
         super.onStop()
-        if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList)
+
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList)
+        }
     }
 
     override fun onDestroy() {
@@ -233,7 +241,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         it.name = resultItem.name
                         it.description = resultItem.description
                         setAddressName(it.name)
-                        drawerListAdapter?.notifyDataSetChanged()
+                        drawerListAdapter.notifyDataSetChanged()
                     }
                 }
             }
@@ -252,27 +260,28 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.setOnPolygonClickListener(this)
         mMap.uiSettings.setAllGesturesEnabled(true)
         mMap.uiSettings.isMapToolbarEnabled = false
-        mMap.setPadding(0, 200, 0, 0)
+        mMap.setPadding(0, 250, 0, 0)
 
         kmlManager = KmlManager(applicationContext, mMap)
-        if(kmlManager.loadKmlFromExternal()) {
-            itemList = kmlManager.itemList
-            lineDistanceList = kmlManager.lineDistanceList
-            polygonAreaList = kmlManager.polygonAreaList
 
-            drawerListAdapter = DrawerListAdapter(itemList, applicationContext)
-            drawerListAdapter?.setOnItemClickListener(this)
-            left_drawer.adapter = drawerListAdapter
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            if(kmlManager.loadKmlFromExternal()) {
+                itemList.addAll(kmlManager.itemList)
+                lineDistanceList = kmlManager.lineDistanceList
+                polygonAreaList = kmlManager.polygonAreaList
 
-            lineDistanceList.map { it.isVisible = isShowDistanceEnabled }
-            polygonAreaList.map { it.isVisible = isShowAreaEnabled }
+                lineDistanceList.map { it.isVisible = isShowDistanceEnabled }
+                polygonAreaList.map { it.isVisible = isShowAreaEnabled }
 
-            val allItemPoints = ArrayList<LatLng>()
-            itemList.map {
-                allItemPoints.addAll(it.coordinates)
+                val allItemPoints = ArrayList<LatLng>()
+                itemList.map {
+                    allItemPoints.addAll(it.coordinates)
+                }
+                drawerListAdapter.notifyDataSetChanged()
+
+                val display = Utils.getDisplayResolution(applicationContext)
+                if(allItemPoints.size > 0) mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(Utils.getPointsBound(allItemPoints), display[0], display[1], (display[0] * 0.2).toInt()))
             }
-            val display = Utils.getDisplayResolution(applicationContext)
-            if(allItemPoints.size > 0) mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(Utils.getPointsBound(allItemPoints), display[0], display[1], (display[0] * 0.1).toInt()))
         }
     }
 
@@ -292,6 +301,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     animateCamera(kmlItem.points[0], zoomLevel, mMap.cameraPosition.bearing)
                     if(isMarkerOptionExpanded) switchMarkerOption(false)
                     isLinkMode = false
+                    updateLinkButtonState()
                     removeEmptyLine()
                     selectedItem = kmlItem
                 }
@@ -299,18 +309,19 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     animateCamera(Utils.getPointsBound(kmlItem.points).center, zoomLevel, mMap.cameraPosition.bearing)
                     if(isMarkerOptionExpanded) switchMarkerOption(false)
                     isLinkMode = false
+                    updateLinkButtonState()
                     removeEmptyLine()
                     selectedItem = kmlItem
                 }
             }
         }
         if(isInfoViewCollapsed) expandInfoView()
+        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onCameraIdle() {
         isCameraMoving = false
-        if(mMap.cameraPosition.zoom <= 17)
-            zoomLevel = mMap.cameraPosition.zoom
+        zoomLevel = mMap.cameraPosition.zoom
         Log.i("zzoommmmm", zoomLevel.toString())
     }
 
@@ -334,106 +345,161 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 .draggable(true)
                 .position(point)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
-        itemList.add(KmlPlacemark(marker, MARKER_NAME + " ${markerIndex++}", null, null, arrayListOf(point), KmlPlacemark.TYPE_POINT))
-        drawerListAdapter?.notifyDataSetChanged()
+        itemList.add(KmlPlacemark(marker, getString(R.string.marker_name) + " ${markerIndex++}", null, null, arrayListOf(point), KmlPlacemark.TYPE_POINT))
+        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
-            return true
-        }
         if(marker != currentMarker) disableMyLocation()
         if(isInfoViewCollapsed && !isDeleteMode) expandInfoView()
 
-        if(isDeleteMode) {
-            if(currentMarker != null) {
+        when {
+            isDeleteMode -> {
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
+                    val iterator = itemList.iterator()
+                    while(iterator.hasNext()) {
+                        val kmlItem = iterator.next()
+                        val item = kmlItem.item
+                        when(item) {
+                            is Polyline -> {
+                                if(item.id == marker.tag) {
+                                    lineDistanceList.filter { item.id == it.tag }.map {
+                                        it.remove()
+                                        lineDistanceList.remove(it)
+                                    }
+                                    item.remove()
+                                    iterator.remove()
+                                }
+                            }
+                            is Polygon -> {
+                                if(item.id == marker.tag) {
+                                    polygonAreaList.filter { item.id == it.tag }.map {
+                                        it.remove()
+                                        polygonAreaList.remove(it)
+                                    }
+                                    item.remove()
+                                    iterator.remove()
+                                }
+                            }
+                        }
+                    }
+                    if(!isInfoViewCollapsed) collapseInfoView()
+                    return true
+                }
                 if(marker == currentMarker) {
+                    currentMarker?.remove()
                     currentMarker = null
                     disableMyLocation()
                 }
-            }
-            itemList.filter { it.item == marker }.map {
-                (it.item as Marker).remove()
-            }
-            itemList.remove(itemList.single { it.item == marker })
-            if(selectedItem == marker && !isInfoViewCollapsed) collapseInfoView()
-            if(!isMarkerOptionExpanded) switchMarkerOption(false)
-            drawerListAdapter?.notifyDataSetChanged()
-            return true
-        }
-        else {
-            selectedItem = marker
-            itemList.filter { it.item == marker }.map { setAddressName(it.name) }
-            if(!isMarkerOptionExpanded) switchMarkerOption(true)
-        }
-        if(isLinkMode) {
-            if(marker.position != previousLatLng) {
-                var list = ArrayList<LatLng>()
-                if(tempLine == null) {
-                    tempLine = mMap.addPolyline(PolylineOptions()
-                            .clickable(true)
-                            .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
-                            .add(startLatLng)
-                            .add((selectedItem as Marker).position))
-                    itemList.add(KmlPlacemark(tempLine!!, LINE_NAME + " ${lineIndex++}", null, null, tempLine!!.points, KmlPlacemark.TYPE_LINE))
+                itemList.filter { it.item == marker }.map {
+                    (it.item as Marker).remove()
                 }
-                else {
-                    list = ArrayList(tempLine!!.points)
-                    list.add(marker.position)
-                    tempLine!!.points = list
-                    itemList.single { it.item == tempLine }.coordinates = list
-                }
-                val distanceMarker = mMap.addMarker(MarkerOptions()
-                        .position(Utils.getPointsBound(arrayListOf(previousLatLng!!, marker.position)).center)
-                        .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDistanceIcon(previousLatLng!!, marker.position, applicationContext))))
-                distanceMarker.title = TAG_DISTANCE
-                distanceMarker.tag = tempLine!!.id
-                distanceMarker.isVisible = isShowDistanceEnabled
-                lineDistanceList.add(distanceMarker)
-
-                previousLatLng = marker.position
-
-                // Polygon
-                if (marker.position == startLatLng) {
-                    val name = POLYGON_NAME + " ${polygonIndex++}"
-                    val polygon = mMap.addPolygon(PolygonOptions()
-                            .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
-                            .clickable(true)
-                            .addAll(list))
-                    itemList.add(KmlPlacemark(polygon, name, null, null, list, KmlPlacemark.TYPE_POLYGON))
-                    setAddressName(name)
-                    selectedItem = polygon
-
-                    val areaMarker = mMap.addMarker(MarkerOptions()
-                            .position(Utils.getPointsBound(list).center)
-                            .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(list, applicationContext))))
-                    areaMarker.title = TAG_AREA
-                    areaMarker.tag = polygon.id
-                    areaMarker.isVisible = isShowAreaEnabled
-                    polygonAreaList.add(areaMarker)
-
-                    for (point in list) {
-                        itemList.filter { it.item is Marker }.filter { point == (it.item as Marker).position }.map {
-                            (it.item as Marker).remove()
-                            itemList.remove(it)
-                        }
-                    }
-                    lineDistanceList.filter { tempLine!!.id == it.tag }.map {
-                        it.remove()
-                        lineDistanceList.remove(it)
-                    }
-                    tempLine!!.remove()
-                    itemList.remove(itemList.single { it.item == tempLine })
-
-                    currentMarker = null
+                itemList.remove(itemList.single { it.item == marker })
+                if(selectedItem == marker && !isInfoViewCollapsed) collapseInfoView()
+                if(!isMarkerOptionExpanded) switchMarkerOption(false)
+                drawerListAdapter.notifyDataSetChanged()
+                return true
+            }
+            isLinkMode -> {
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
                     isLinkMode = false
                     updateLinkButtonState()
-                    switchMarkerOption(false)
+                }
+                if(marker.position != previousLatLng) {
+                    var list = ArrayList<LatLng>()
+                    if(tempLine == null) {
+                        tempLine = mMap.addPolyline(PolylineOptions()
+                                .clickable(true)
+                                .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+                                .add(startLatLng)
+                                .add((selectedItem as Marker).position))
+                        itemList.add(KmlPlacemark(tempLine!!, getString(R.string.line_name) + " ${lineIndex++}", null, null, tempLine!!.points, KmlPlacemark.TYPE_LINE))
+                    }
+                    else {
+                        list = ArrayList(tempLine!!.points)
+                        list.add(marker.position)
+                        tempLine!!.points = list
+                        itemList.single { it.item == tempLine }.coordinates = list
+                    }
+                    val distanceMarker = mMap.addMarker(MarkerOptions()
+                            .position(Utils.getPointsBound(arrayListOf(previousLatLng!!, marker.position)).center)
+                            .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDistanceIcon(previousLatLng!!, marker.position, applicationContext))))
+                    distanceMarker.title = TAG_DISTANCE
+                    distanceMarker.tag = tempLine!!.id
+                    distanceMarker.isVisible = isShowDistanceEnabled
+                    lineDistanceList.add(distanceMarker)
+
+                    previousLatLng = marker.position
+
+                    // Polygon
+                    if (marker.position == startLatLng) {
+                        val name = getString(R.string.polygon_name) + " ${polygonIndex++}"
+                        val polygon = mMap.addPolygon(PolygonOptions()
+                                .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+                                .clickable(true)
+                                .addAll(list))
+                        itemList.add(KmlPlacemark(polygon, name, null, null, list, KmlPlacemark.TYPE_POLYGON))
+                        setAddressName(name)
+                        selectedItem = polygon
+
+                        val areaMarker = mMap.addMarker(MarkerOptions()
+                                .position(Utils.getPointsBound(list).center)
+                                .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(list, applicationContext))))
+                        areaMarker.title = TAG_AREA
+                        areaMarker.tag = polygon.id
+                        areaMarker.isVisible = isShowAreaEnabled
+                        polygonAreaList.add(areaMarker)
+
+                        for (point in list) {
+                            itemList.filter { it.item is Marker }.filter { point == (it.item as Marker).position }.map {
+                                (it.item as Marker).remove()
+                                if(it.item == currentMarker) currentMarker = null
+                                itemList.remove(it)
+                            }
+                        }
+                        lineDistanceList.filter { tempLine!!.id == it.tag }.map {
+                            it.remove()
+                            lineDistanceList.remove(it)
+                        }
+                        tempLine!!.remove()
+                        itemList.remove(itemList.single { it.item == tempLine })
+
+                        isLinkMode = false
+                        updateLinkButtonState()
+                        switchMarkerOption(false)
+                    }
                 }
             }
+            else -> {
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
+                    itemList.map {
+                        val item = it.item
+                        when(item) {
+                            is Polyline -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(it.coordinates[0], zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                            is Polygon -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(Utils.getPointsBound(it.coordinates).center, zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                        }
+                    }
+                    if(isMarkerOptionExpanded) switchMarkerOption(false)
+                    return true
+                }
+                selectedItem = marker
+                itemList.filter { it.item == marker }.map { setAddressName(it.name) }
+                if(!isMarkerOptionExpanded) switchMarkerOption(true)
+            }
         }
-
-        drawerListAdapter?.notifyDataSetChanged()
+        drawerListAdapter.notifyDataSetChanged()
         return false
     }
 
@@ -468,7 +534,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             itemList.filter { it.item == polyline }.map { setAddressName(it.name) }
             animateCamera(polyline.points[0],zoomLevel, mMap.cameraPosition.bearing)
         }
-        drawerListAdapter?.notifyDataSetChanged()
+        if(isLinkMode) {
+            isLinkMode = false
+            updateLinkButtonState()
+        }
+        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onPolygonClick(polygon: Polygon) {
@@ -492,7 +562,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             itemList.filter { it.item == polygon }.map { setAddressName(it.name) }
             animateCamera(Utils.getPointsBound(polygon.points).center,zoomLevel, mMap.cameraPosition.bearing)
         }
-        drawerListAdapter?.notifyDataSetChanged()
+        if(isLinkMode) {
+            isLinkMode = false
+            updateLinkButtonState()
+        }
+        drawerListAdapter.notifyDataSetChanged()
     }
 
     override fun onClick(view: View?) {
@@ -548,7 +622,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         isLinkMode = false
                         updateLinkButtonState()
                         switchMarkerOption(false)
-                        Toast.makeText(applicationContext, "Select item to remove.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(applicationContext, getString(R.string.delete_mode_message), Toast.LENGTH_SHORT).show()
                     }
                     updateDeleteButtonState()
                 }
@@ -561,7 +635,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if(isLinkMode) {
                         isDeleteMode = false
                         updateDeleteButtonState()
-                        Toast.makeText(applicationContext, "Select another marker to connect.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(applicationContext, getString(R.string.link_mode_message), Toast.LENGTH_SHORT).show()
 
                         startLatLng = (selectedItem as Marker).position
                         previousLatLng = (selectedItem as Marker).position
@@ -596,14 +670,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     updateMyLocationButtonState()
                 }
                 else {
-                    Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.permission_message), Toast.LENGTH_SHORT).show()
                     collapseInfoView()
                 }
                 return
             }
             PERMISSION_REQUEST_CODE_STORAGE -> {
                 if(grantResults.isNotEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Need permission for service.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.permission_message), Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
@@ -617,7 +691,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         else if(currentLocation != null) ll = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
 
         if(ll != null) {
-            val name = MY_LOCATION_NAME
+            val name = getString(R.string.my_locatoin)
             if(currentMarker != null) currentMarker!!.position = ll
             else {
                 currentMarker = mMap.addMarker(MarkerOptions().position(ll))
@@ -760,7 +834,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             previousLatLng = null
             removeEmptyLine()
         }
-        drawerListAdapter?.notifyDataSetChanged()
+        drawerListAdapter.notifyDataSetChanged()
     }
 
     private fun updateDeleteButtonState() {
@@ -797,10 +871,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         const val MAX_CAMERA_ZOOM = 10.0f
         const val ADDRESS_ANIM_DURATION: Long = 1000
         const val MENU_EXPAND_DURATION: Long = 250
-        const val LINE_NAME = "Line"
-        const val POLYGON_NAME = "Polygon"
-        const val MARKER_NAME = "Marker"
-        const val MY_LOCATION_NAME = "My Location"
         const val TAG_DISTANCE = "DISTANCE"
         const val TAG_AREA = "AREA"
     }

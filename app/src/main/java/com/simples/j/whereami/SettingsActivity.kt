@@ -4,12 +4,11 @@ import android.annotation.TargetApi
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.preference.*
-import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
-import android.util.Log
 import android.view.MenuItem
 
 /**
@@ -65,6 +64,14 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             addPreferencesFromResource(R.xml.pref_general)
             setHasOptionsMenu(true)
 
+            val pName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
+
+            findPreference(resources.getString(R.string.pref_version_id)).summary = pName
+            findPreference(resources.getString(R.string.pref_github_id)).setOnPreferenceClickListener {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resources.getString(R.string.github_url)))
+                startActivity(intent)
+                true
+            }
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_distance_action_id)))
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_area_action_id)))
 //            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->

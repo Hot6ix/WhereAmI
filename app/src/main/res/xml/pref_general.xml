@@ -33,8 +33,12 @@
         android:title="@string/pref_02_title" >
 
         <Preference
-            android:key="@string/pref_about_id"
-            android:title="@string/pref_about_title" />
+            android:key="@string/pref_version_id"
+            android:title="@string/pref_version_title" />
+
+        <Preference
+            android:key="@string/pref_github_id"
+            android:title="@string/pref_github_title" />
 
     </PreferenceCategory>
 

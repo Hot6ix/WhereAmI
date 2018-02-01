@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">WhereAmI</string>
+    <string name="title_activity_map">Map</string>
+    <string name="menu_mylocatoin">내 위치</string>
+    <string name="menu_share">공유</string>
+    <string name="menu_settings">설정</string>
+    <string name="send_to">다음에 위치를 전송 &#8230;</string>
+    <string name="admob_app_id">ca-app-pub-1459869098528763~6883752601</string>
+    <string name="admob_unit_id">ca-app-pub-1459869098528763/3874445882</string>
+    <string name="item_list_title">아이템</string>
+    <string name="detail_name_title">이름</string>
+    <string name="detail_description_title">설명</string>
+    <string name="detail_save_title">저장</string>
+    <string name="short_points_format">%1$.7f, %2$.7f</string>
+    <string name="untitled">제목없음</string>
+    <string name="marker_name">마커</string>
+    <string name="line_name">선</string>
+    <string name="polygon_name">도형</string>
+    <string name="my_locatoin">내 위치</string>
+    <string name="pyong">평</string>
+
+    <!-- Toast message -->
+    <string name="delete_mode_message">삭제할 아이템을 선택해주세요.</string>
+    <string name="link_mode_message">연결을 위해 다른 마커를 선택해주세요.</string>
+    <string name="permission_message">서비스 제공을 위해 권한이 필요합니다.</string>
+
+    <!-- Strings related to Settings -->
+
+    <string name="pref_00_title">일반</string>
+    <string name="pref_01_title">알람</string>
+    <string name="pref_02_title">기타</string>
+
+    <!-- Show Distance -->
+    <string name="pref_show_distance_id">SHOW_DISTANCE</string>
+    <string name="pref_show_distance_title">두 좌표 간 거리 표시</string>
+
+    <string name="pref_distance_action_title">거리 단위</string>
+    <string name="pref_distance_action_list_title">거리 단위</string>
+    <string name="pref_distance_action_id">DISTANCE_MEASURE</string>
+
+    <string-array name="pref_distance_action_entries">
+        <item>미터/킬로미터 (m/km)</item>
+        <item>인치 (in)</item>
+        <item>피트 (ft)</item>
+        <item>야드 (yd)</item>
+        <item>마일 (mi)</item>
+    </string-array>
+    <string-array name="pref_distance_action_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
+    <!-- Show Area -->
+    <string name="pref_show_area_id">SHOW_AREA</string>
+    <string name="pref_show_area_title">도형 면적 표시</string>
+
+    <string name="pref_area_action_title">면적 단위</string>
+    <string name="pref_area_action_list_title">면적 단위</string>
+    <string name="pref_area_action_id">AREA_MEASURE</string>
+
+    <string-array name="pref_area_action_entries">
+        <item>제곱미터 (m²)</item>
+        <item>헥타 (ha)</item>
+        <item>에이커 (ac)</item>
+        <item>아르 (a)</item>
+        <item>평 (pyong)</item>
+    </string-array>
+    <string-array name="pref_area_action_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
+    <!-- etc -->
+
+    <string name="pref_version_title">Version</string>
+    <string name="pref_version_id">VERSION</string>
+    <string name="pref_github_title">Open source - GitHub</string>
+    <string name="pref_github_id">GITHUB</string>
+
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_detail">상세 정보</string>
+    <string name="github_url">https://github.com/Hot6ix/WhereAmI</string>
+
+</resources>

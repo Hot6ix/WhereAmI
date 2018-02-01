@@ -2,7 +2,6 @@ package com.simples.j.whereami.tools
 
 import android.content.Context
 import android.os.Environment
-import android.preference.PreferenceManager
 import android.support.v4.content.ContextCompat
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
