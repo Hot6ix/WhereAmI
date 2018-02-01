@@ -19,7 +19,7 @@ import kotlinx.android.synthetic.main.drawer_list_item.view.*
  *
  */
 
-class DrawerListAdapter(private val list: ArrayList<Any>, private val context: Context): RecyclerView.Adapter<DrawerListAdapter.ViewHolder>() {
+class DrawerListAdapter(private val list: ArrayList<KmlPlacemark>, private val context: Context): RecyclerView.Adapter<DrawerListAdapter.ViewHolder>() {
 
     private lateinit var drawerItemClickListener: OnItemClickListener
 
@@ -53,23 +53,23 @@ class DrawerListAdapter(private val list: ArrayList<Any>, private val context: C
             TYPE_CONTENT -> {
                 val item = list[position - 1]
 
-                when(item) {
+                when(item.item) {
                     is Marker -> {
-                        holder.itemName?.text = item.tag.toString()
+                        holder.itemName?.text = item.name
                         holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_action_markers))
                     }
                     is Polyline -> {
-                        holder.itemName?.text = item.tag.toString()
+                        holder.itemName?.text = item.name
                         holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_line))
                     }
                     is Polygon -> {
-                        holder.itemName?.text = item.tag.toString()
+                        holder.itemName?.text = item.name
                         holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_polygon))
                     }
                 }
 
                 holder.itemView.setOnClickListener {
-                    drawerItemClickListener.onDrawerItemClick(list[position - 1], holder.itemView)
+                    drawerItemClickListener.onDrawerItemClick(list[position - 1].item, holder.itemView)
                 }
             }
         }
@@ -100,13 +100,13 @@ class DrawerListAdapter(private val list: ArrayList<Any>, private val context: C
         }
     }
 
+    interface OnItemClickListener {
+        fun onDrawerItemClick(item: Any, view: View)
+    }
+
     companion object {
         const val TYPE_HEADER = 0
         const val TYPE_CONTENT = 1
     }
 
-}
-
-interface OnItemClickListener {
-    fun onDrawerItemClick(item: Any, view: View)
 }

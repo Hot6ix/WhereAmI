@@ -3,6 +3,7 @@ package com.simples.j.whereami.tools
 import com.google.android.gms.maps.model.LatLng
 import org.w3c.dom.Node
 import java.io.InputStream
+import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -12,9 +13,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class KmlParser {
 
-    fun parse(input: InputStream): ArrayList<KmlPlacemark> {
+    fun parse(input: InputStream): ArrayList<KmlInfo> {
 
-        val list = ArrayList<KmlPlacemark>()
+        val list = ArrayList<KmlInfo>()
         val factory = DocumentBuilderFactory.newInstance()
         val builder = factory.newDocumentBuilder()
         val document = builder.parse(input)
@@ -38,9 +39,21 @@ class KmlParser {
                     while(subIndex < children.length) { // items of Placemark
                         if(children.item(subIndex).nodeType != Node.TEXT_NODE) {
                             when(children.item(subIndex).nodeName) {
-                                "name" -> name = children.item(subIndex).firstChild.nodeValue
-                                "description" -> description = children.item(subIndex).firstChild.nodeValue
-                                "styleUrl" -> styleUrl = children.item(subIndex).firstChild.nodeValue
+                                "name" -> {
+                                    if(children.item(subIndex).firstChild != null) {
+                                        name = children.item(subIndex).firstChild.nodeValue
+                                    }
+                                }
+                                "description" -> {
+                                    if(children.item(subIndex).firstChild != null) {
+                                        description = children.item(subIndex).firstChild.nodeValue
+                                    }
+                                }
+                                "styleUrl" -> {
+                                    if(children.item(subIndex).firstChild != null) {
+                                        styleUrl = children.item(subIndex).firstChild.nodeValue
+                                    }
+                                }
                                 "Point" -> {
                                     type = children.item(subIndex).nodeName
                                     val split = coordinateTags.item(index).firstChild.nodeValue.split(",")
@@ -60,7 +73,7 @@ class KmlParser {
                         subIndex++
                     }
 
-                    list.add(KmlPlacemark(name, description, styleUrl, pointList, type))
+                    list.add(KmlInfo(name, description, styleUrl, pointList, type))
                 }
                 index++
             }

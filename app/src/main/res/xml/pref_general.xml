@@ -2,11 +2,30 @@
 
     <PreferenceCategory
         android:title="@string/pref_00_title">
-        
+
         <SwitchPreference
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="@string/pref_show_distance_id"
             android:title="@string/pref_show_distance_title"/>
+
+        <ListPreference
+            android:defaultValue="0"
+            android:key="@string/pref_distance_action_id"
+            android:title="@string/pref_distance_action_title"
+            android:entries="@array/pref_distance_action_entries"
+            android:entryValues="@array/pref_distance_action_values" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/pref_show_area_id"
+            android:title="@string/pref_show_area_title"/>
+
+        <ListPreference
+            android:defaultValue="0"
+            android:key="@string/pref_area_action_id"
+            android:title="@string/pref_area_action_title"
+            android:entries="@array/pref_area_action_entries"
+            android:entryValues="@array/pref_area_action_values" />
 
     </PreferenceCategory>
 

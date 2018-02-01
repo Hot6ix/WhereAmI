@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.preference.*
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.util.Log
 import android.view.MenuItem
 
 /**
@@ -64,7 +65,8 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             addPreferencesFromResource(R.xml.pref_general)
             setHasOptionsMenu(true)
 
-//            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_tracking_action_id)))
+            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_distance_action_id)))
+            bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_area_action_id)))
 //            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
 //                if(value is Boolean) {
 //                    if(value) activity.startService(Intent(activity, TrackingService::class.java))

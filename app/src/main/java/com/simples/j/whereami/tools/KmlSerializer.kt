@@ -11,7 +11,7 @@ import java.io.FileOutputStream
  * Created by james on 2018-01-17.
  *
  */
-class KmlSerializer(private var context: Context, private var items: ArrayList<Any>) {
+class KmlSerializer(private var context: Context, private var items: ArrayList<KmlPlacemark>) {
 
     fun serialize(output: FileOutputStream) {
         val serializer = XmlPullParserFactory.newInstance().newSerializer()
@@ -37,28 +37,47 @@ class KmlSerializer(private var context: Context, private var items: ArrayList<A
         serializer.endTag(null, "name")
         // Objects
         for(item in items) {
-            when(item) {
+            val kmlItem = item.item
+            when(kmlItem) {
                 is Marker -> {
                     serializer.startTag(null, "Placemark")
+                    // Name
                     serializer.startTag(null, "name")
-                    serializer.text(item.tag.toString())
+                    serializer.text(item.name)
                     serializer.endTag(null, "name")
+                    // Description
+                    val description = item.description
+                    if(description != null && description.isNotEmpty()) {
+                        serializer.startTag(null, "description")
+                        serializer.text(item.description)
+                        serializer.endTag(null, "description")
+                    }
+                    // Point
                     serializer.startTag(null, "Point")
                     serializer.startTag(null, "coordinates")
-                    serializer.text("${item.position.longitude},${item.position.latitude},0")
+                    serializer.text("${kmlItem.position.longitude},${kmlItem.position.latitude},0")
                     serializer.endTag(null, "coordinates")
                     serializer.endTag(null, "Point")
                     serializer.endTag(null, "Placemark")
                 }
                 is Polyline -> {
                     serializer.startTag(null, "Placemark")
+                    // Name
                     serializer.startTag(null, "name")
-                    serializer.text(item.tag.toString())
+                    serializer.text(item.name)
                     serializer.endTag(null, "name")
+                    // Description
+                    val description = item.description
+                    if(description != null && description.isNotEmpty()) {
+                        serializer.startTag(null, "description")
+                        serializer.text(item.description)
+                        serializer.endTag(null, "description")
+                    }
+                    // Points
                     serializer.startTag(null, "LineString")
                     serializer.startTag(null, "coordinates")
                     val points = StringBuilder()
-                    for(point in item.points) {
+                    for(point in kmlItem.points) {
                         points.append("${point.longitude},${point.latitude},0\n")
                     }
                     serializer.text(points.toString())
@@ -68,15 +87,24 @@ class KmlSerializer(private var context: Context, private var items: ArrayList<A
                 }
                 is Polygon -> {
                     serializer.startTag(null, "Placemark")
+                    // Name
                     serializer.startTag(null, "name")
-                    serializer.text(item.tag.toString())
+                    serializer.text(item.name)
                     serializer.endTag(null, "name")
+                    // Description
+                    val description = item.description
+                    if(description != null && description.isNotEmpty()) {
+                        serializer.startTag(null, "description")
+                        serializer.text(item.description)
+                        serializer.endTag(null, "description")
+                    }
+                    // Points
                     serializer.startTag(null, "Polygon")
                     serializer.startTag(null, "outerBoundaryIs")
                     serializer.startTag(null, "LinearRing")
                     serializer.startTag(null, "coordinates")
                     val points = StringBuilder()
-                    for(point in item.points) {
+                    for(point in kmlItem.points) {
                         points.append("${point.longitude},${point.latitude},0\n")
                     }
                     serializer.text(points.toString())

@@ -50,7 +50,6 @@ class TrackingService : Service() {
             }
         }
 
-        Log.i(packageName, "Enable location update ( interval : " + interval + ", Action : " + sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0") + " )")
         mFusedLocationSingleton.enableLocationUpdate(applicationContext, interval, interval, LocationRequest.PRIORITY_HIGH_ACCURACY, locationCallback)
     }
 
@@ -69,24 +68,24 @@ class TrackingService : Service() {
 
         val intent = Intent()
 
-        when (sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0").toInt()) {
-
-            0 -> {
-                // Open app
-                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MapActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
-                notificationBuilder.setContentIntent(pIntent)
-            }
-            1 -> {
-                // Share
-                intent.action = Intent.ACTION_SEND
-                intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, content)
-
-                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent.createChooser(intent, resources.getText(R.string.send_to)), PendingIntent.FLAG_UPDATE_CURRENT)
-                notificationBuilder.setContentIntent(pIntent)
-            }
-
-        }
+//        when (sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0").toInt()) {
+//
+//            0 -> {
+//                // Open app
+//                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MapActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
+//                notificationBuilder.setContentIntent(pIntent)
+//            }
+//            1 -> {
+//                // Share
+//                intent.action = Intent.ACTION_SEND
+//                intent.type = "text/plain"
+//                intent.putExtra(Intent.EXTRA_TEXT, content)
+//
+//                val pIntent = PendingIntent.getActivity(applicationContext, 0, Intent.createChooser(intent, resources.getText(R.string.send_to)), PendingIntent.FLAG_UPDATE_CURRENT)
+//                notificationBuilder.setContentIntent(pIntent)
+//            }
+//
+//        }
         return notificationBuilder
     }
 }
