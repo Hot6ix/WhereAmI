@@ -34,6 +34,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.firebase.crash.FirebaseCrash
 import com.simples.j.whereami.tools.*
 import kotlinx.android.synthetic.main.activity_map.*
 
@@ -134,14 +135,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         if(currentMarker == null) {
                             currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
                             itemList.add(KmlPlacemark(currentMarker!!, getString(R.string.my_locatoin), null, null, arrayListOf(myLocation), KmlPlacemark.TYPE_POINT))
-                            selectedItem = currentMarker
                         }
                         else {
                             currentMarker!!.position = myLocation
                         }
+                        selectedItem = currentMarker
                         itemList.filter { it.item == currentMarker }.map { setAddressName(it.name) }
                         drawerListAdapter.notifyDataSetChanged()
-                        if(!isMarkerOptionExpanded) switchMarkerOption(true)
                     }
                 }
             }
@@ -187,7 +187,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     if(it.type == KmlPlacemark.TYPE_POLYGON) {
                         val item = it.item as Polygon
                         val areaMarker = mMap.addMarker(MarkerOptions()
-                                .position(Utils.getCenterOfPoints(it.coordinates))
+                                .position(Utils.getPointsBound(it.coordinates).center)
                                 .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(it.coordinates, applicationContext))))
                         areaMarker.title = TAG_AREA
                         areaMarker.tag = item.id
@@ -205,7 +205,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         super.onStop()
 
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList)
+            try {
+                if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList)
+            }
+            catch (e: UninitializedPropertyAccessException) {
+                Log.i(applicationContext.packageName, "kmlManager not initialized.")
+                FirebaseCrash.report(e)
+            }
         }
     }
 
@@ -540,6 +546,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 selectedItem = polyline
                 itemList.filter { it.item == polyline }.map { setAddressName(it.name) }
                 animateCamera(polyline.points[0],zoomLevel, mMap.cameraPosition.bearing)
+                isMyLocationEnabled = false
+                updateMyLocationButtonState()
             }
             drawerListAdapter.notifyDataSetChanged()
         }
@@ -566,6 +574,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 selectedItem = polygon
                 itemList.filter { it.item == polygon }.map { setAddressName(it.name) }
                 animateCamera(Utils.getPointsBound(polygon.points).center,zoomLevel, mMap.cameraPosition.bearing)
+                isMyLocationEnabled = false
+                updateMyLocationButtonState()
             }
             drawerListAdapter.notifyDataSetChanged()
         }
@@ -594,22 +604,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 }
                 R.id.address -> {
                     if(selectedItem != null) {
-                        val intent = Intent(this, DetailActivity::class.java)
-                        val item = itemList.single { it.item == selectedItem }
-                        val kmlItem = item.item
-                        when(kmlItem) {
-                            is Marker -> {
-                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+
+                        val item = itemList.singleOrNull { it.item == selectedItem }
+                        if(item != null) {
+                            val intent = Intent(this, DetailActivity::class.java)
+                            val kmlItem = item.item
+                            when(kmlItem) {
+                                is Marker -> {
+                                    intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                                }
+                                is Polyline -> {
+                                    intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                                }
+                                is Polygon -> {
+                                    intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                                }
                             }
-                            is Polyline -> {
-                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
-                            }
-                            is Polygon -> {
-                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
-                            }
+                            intent.putExtra(DetailActivity.ITEM, KmlInfo(item.name, item.description, item.styleUrl, item.coordinates, item.type))
+                            startActivityForResult(intent, 5)
                         }
-                        intent.putExtra(DetailActivity.ITEM, KmlInfo(item.name, item.description, item.styleUrl, item.coordinates, item.type))
-                        startActivityForResult(intent, 5)
+                        else {
+                            Toast.makeText(applicationContext, getString(R.string.unknown_item), Toast.LENGTH_SHORT).show()
+                            collapseInfoView()
+                            if(isMarkerOptionExpanded) switchMarkerOption(false)
+                        }
                     }
                 }
                 R.id.item_more -> {
@@ -654,6 +672,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         lineDistanceList.last().remove()
                         lineDistanceList.removeAt(lineDistanceList.lastIndex)
                         tempLine!!.points = list
+                        itemList.single { it.item == tempLine }.coordinates = list
                     }
                 }
             }

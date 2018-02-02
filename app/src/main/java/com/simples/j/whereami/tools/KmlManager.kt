@@ -22,7 +22,6 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
     var itemInfoList: ArrayList<KmlInfo> = ArrayList()
     var lineDistanceList: ArrayList<Marker> = ArrayList()
     var polygonAreaList: ArrayList<Marker> = ArrayList()
-    var isLoadedFromFile = false
 
     fun checkStorageState(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
@@ -31,22 +30,19 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
     fun saveKmlToExternal(items: ArrayList<KmlPlacemark>) {
         val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
         if(!dir.exists()) dir.mkdirs()
-        val file = File(dir, "footprint.kml")
+        val file = File(dir, context.getString(R.string.save_file_name))
         val output = FileOutputStream(file)
         KmlSerializer(context, items).serialize(output)
     }
 
     fun loadKmlFromExternal(): Boolean {
-        val file = File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), "footprint.kml")
+        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), context.getString(R.string.save_file_name))
         if(file.exists()) {
             val inputStream = FileInputStream(file)
             itemInfoList = KmlParser().parse(inputStream)
             addItemsToMap()
-            isLoadedFromFile = true
             return true
         }
-        isLoadedFromFile = false
         return false
     }
 
@@ -87,7 +83,7 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                     itemList.add(KmlPlacemark(polygon, item.name, item.description, item.styleUrl, item.coordinates, item.type))
 
                     val areaMarker = googleMap.addMarker(MarkerOptions()
-                            .position(Utils.getCenterOfPoints(item.coordinates))
+                            .position(Utils.getPointsBound(item.coordinates).center)
                             .icon(BitmapDescriptorFactory.fromBitmap(Utils.getAreaIcon(item.coordinates, context))))
                     areaMarker.title = MapActivity.TAG_AREA
                     areaMarker.tag = polygon.id

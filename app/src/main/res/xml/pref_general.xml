@@ -37,6 +37,10 @@
             android:title="@string/pref_version_title" />
 
         <Preference
+            android:key="@string/pref_location_id"
+            android:title="@string/pref_location_title" />
+
+        <Preference
             android:key="@string/pref_github_id"
             android:title="@string/pref_github_title" />
 

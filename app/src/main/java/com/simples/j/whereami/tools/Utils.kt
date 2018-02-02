@@ -3,6 +3,7 @@ package com.simples.j.whereami.tools
 import android.content.Context
 import android.graphics.Bitmap
 import android.preference.PreferenceManager
+import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
@@ -23,19 +24,6 @@ class Utils() {
             }
 
             return bounds.build()
-        }
-
-        fun getCenterOfPoints(points: List<LatLng>): LatLng {
-            var latitude = 0.0
-            var longitude = 0.0
-            for(item in points) {
-                latitude += item.latitude
-                longitude += item.longitude
-            }
-            latitude /= points.size
-            longitude /= points.size
-
-            return LatLng(latitude, longitude)
         }
 
         fun getDistance(list: List<LatLng>, context: Context): String {

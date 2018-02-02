@@ -7,9 +7,11 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.preference.*
 import android.support.v4.content.ContextCompat
 import android.view.MenuItem
+import java.io.File
 
 /**
  * A [PreferenceActivity] that presents a set of application settings. On
@@ -67,6 +69,17 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             val pName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
 
             findPreference(resources.getString(R.string.pref_version_id)).summary = pName
+            val locationPath = findPreference(resources.getString(R.string.pref_location_id))
+            locationPath.summary = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), activity.getString(R.string.save_file_name)).path
+            locationPath.setOnPreferenceClickListener {
+                val intent = Intent(Intent.ACTION_VIEW)
+                val uri = Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS))
+                intent.setDataAndType(uri, "resource/folder")
+                if(intent.resolveActivity(activity.packageManager) != null) {
+                    startActivity(Intent.createChooser(intent, activity.getString(R.string.open_folder)))
+                }
+                true
+            }
             findPreference(resources.getString(R.string.pref_github_id)).setOnPreferenceClickListener {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resources.getString(R.string.github_url)))
                 startActivity(intent)

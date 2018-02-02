@@ -18,11 +18,13 @@
     <string name="polygon_name">Polygon</string>
     <string name="my_locatoin">My location</string>
     <string name="pyong">pyong</string>
+    <string name="open_folder">Open with &#8230;</string>
 
     <!-- Toast message -->
     <string name="delete_mode_message">Select item to remove.</string>
     <string name="link_mode_message">Select another marker to connect.</string>
     <string name="permission_message">Need permission for service.</string>
+    <string name="unknown_item">Unknown item selected.</string>
 
     <!-- Strings related to Settings -->
 
@@ -78,10 +80,13 @@
 
     <!-- etc -->
 
+    <string name="save_file_name">footprint.kml</string>
     <string name="pref_version_title">Version</string>
     <string name="pref_version_id">VERSION</string>
     <string name="pref_github_title">Open source - GitHub</string>
     <string name="pref_github_id">GITHUB</string>
+    <string name="pref_location_title">File location</string>
+    <string name="pref_location_id">FILE</string>
 
     <string name="title_activity_main">MainActivity</string>
     <string name="title_activity_detail">Detail</string>

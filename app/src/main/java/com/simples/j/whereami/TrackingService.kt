@@ -64,7 +64,7 @@ class TrackingService : Service() {
                 .setContentTitle(title)
                 .setContentText(content)
 
-        val intent = Intent()
+//        val intent = Intent()
 
 //        when (sharedPref.getString(applicationContext.getString(R.string.pref_tracking_action_id), "0").toInt()) {
 //
