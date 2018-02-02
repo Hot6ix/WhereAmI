@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
@@ -231,12 +230,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             }
             else -> super.onBackPressed()
         }
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration?) {
-        super.onConfigurationChanged(newConfig)
-
-
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -600,22 +593,24 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     }
                 }
                 R.id.address -> {
-                    val intent = Intent(this, DetailActivity::class.java)
-                    val item = itemList.single { it.item == selectedItem }
-                    val kmlItem = item.item
-                    when(kmlItem) {
-                        is Marker -> {
-                            intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                    if(selectedItem != null) {
+                        val intent = Intent(this, DetailActivity::class.java)
+                        val item = itemList.single { it.item == selectedItem }
+                        val kmlItem = item.item
+                        when(kmlItem) {
+                            is Marker -> {
+                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                            }
+                            is Polyline -> {
+                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                            }
+                            is Polygon -> {
+                                intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
+                            }
                         }
-                        is Polyline -> {
-                            intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
-                        }
-                        is Polygon -> {
-                            intent.putExtra(DetailActivity.ITEM_ID, kmlItem.id)
-                        }
+                        intent.putExtra(DetailActivity.ITEM, KmlInfo(item.name, item.description, item.styleUrl, item.coordinates, item.type))
+                        startActivityForResult(intent, 5)
                     }
-                    intent.putExtra(DetailActivity.ITEM, KmlInfo(item.name, item.description, item.styleUrl, item.coordinates, item.type))
-                    startActivityForResult(intent, 5)
                 }
                 R.id.item_more -> {
                     switchMenuLayout(!isMenuLayoutExpanded)
