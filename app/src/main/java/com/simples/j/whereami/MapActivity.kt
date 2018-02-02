@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
@@ -99,11 +100,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         left_drawer.layoutManager = layoutManager
 
         // Ad
-        MobileAds.initialize(this, applicationContext.getString(R.string.admob_app_id))
+        MobileAds.initialize(this, getString(R.string.admob_app_id))
         adView.loadAd(AdRequest.Builder().build())
 
         // Get services
-        kmlManager = KmlManager(applicationContext, mMap)
         mFusedLocationSingleton = FusedLocationSingleton.getInstance(applicationContext)
         sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
@@ -233,6 +233,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        super.onConfigurationChanged(newConfig)
+
+
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when(resultCode) {
             Activity.RESULT_OK -> {
@@ -263,6 +269,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         mMap.uiSettings.isMapToolbarEnabled = false
         mMap.setPadding(0, 250, 0, 0)
 
+        kmlManager = KmlManager(applicationContext, mMap)
+
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             if(kmlManager.loadKmlFromExternal()) {
                 itemList.addAll(kmlManager.itemList)
@@ -286,6 +294,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
     override fun onDrawerItemClick(item: Any, view: View) {
         drawer_layout.closeDrawers()
+        isMyLocationEnabled = false
+        updateMyLocationButtonState()
         if(zoomLevel < MAX_CAMERA_ZOOM) zoomLevel = DEFAULT_CAMERA_ZOOM
         itemList.filter { it.item == item }.map {
             val kmlItem = it.item
@@ -475,6 +485,29 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 }
             }
             else -> {
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
+                    itemList.map {
+                        val item = it.item
+                        when(item) {
+                            is Polyline -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(it.coordinates[0], zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                            is Polygon -> {
+                                if(item.id == marker.tag) {
+                                    selectedItem = item
+                                    setAddressName(it.name)
+                                    animateCamera(Utils.getPointsBound(it.coordinates).center, zoomLevel, mMap.cameraPosition.bearing)
+                                }
+                            }
+                        }
+                    }
+                    return true
+                }
+                if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) return true
                 selectedItem = marker
                 itemList.filter { it.item == marker }.map { setAddressName(it.name) }
                 if(!isMarkerOptionExpanded) switchMarkerOption(true)
