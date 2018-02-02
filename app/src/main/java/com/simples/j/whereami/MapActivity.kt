@@ -141,6 +141,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         }
                         itemList.filter { it.item == currentMarker }.map { setAddressName(it.name) }
                         drawerListAdapter.notifyDataSetChanged()
+                        if(!isMarkerOptionExpanded) switchMarkerOption(true)
                     }
                 }
             }
@@ -588,7 +589,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                             if(isInfoViewCollapsed) expandInfoView()
                             isLinkMode = false
                             updateLinkButtonState()
-                            if(!isMarkerOptionExpanded) switchMarkerOption(true)
                         }
                     }
                 }

@@ -29,8 +29,9 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
     }
 
     fun saveKmlToExternal(items: ArrayList<KmlPlacemark>) {
-        val file = File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), "footprint.kml")
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+        if(!dir.exists()) dir.mkdirs()
+        val file = File(dir, "footprint.kml")
         val output = FileOutputStream(file)
         KmlSerializer(context, items).serialize(output)
     }
