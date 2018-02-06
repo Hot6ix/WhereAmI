@@ -11,6 +11,10 @@ import android.support.v4.app.NotificationCompat
 import com.google.android.gms.location.*
 import java.util.*
 
+/*
+ * This class does not service in app anymore.
+* */
+
 class TrackingService : Service() {
 
     private lateinit var mFusedLocationClient: FusedLocationProviderClient

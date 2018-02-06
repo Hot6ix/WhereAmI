@@ -35,8 +35,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.firebase.crash.FirebaseCrash
+import com.simples.j.whereami.style.LineStyle
+import com.simples.j.whereami.style.MarkerStyle
+import com.simples.j.whereami.style.PolygonStyle
+import com.simples.j.whereami.style.StyleItem
 import com.simples.j.whereami.tools.*
 import kotlinx.android.synthetic.main.activity_map.*
+import java.util.*
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener, GoogleMap.OnPolylineClickListener, GoogleMap.OnPolygonClickListener,  View.OnClickListener, DrawerListAdapter.OnItemClickListener {
 
@@ -74,6 +79,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var isMarkerOptionExpanded = false
 
     private var itemList = ArrayList<KmlPlacemark>()
+    private var itemStyleList = ArrayList<StyleItem>()
     private var lineDistanceList = ArrayList<Marker>()
     private var polygonAreaList = ArrayList<Marker>()
 
@@ -133,8 +139,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         animateCamera(myLocation, zoomLevel, 0.toFloat())
 
                         if(currentMarker == null) {
-                            currentMarker = mMap.addMarker(MarkerOptions().position(myLocation))
-                            itemList.add(KmlPlacemark(currentMarker!!, getString(R.string.my_locatoin), null, null, arrayListOf(myLocation), KmlPlacemark.TYPE_POINT))
+                            val style = Utils.getDefaultMarkerStyle(applicationContext)
+                            itemStyleList.add(style)
+                            currentMarker = mMap.addMarker(MarkerOptions()
+                                    .position(myLocation)
+                                    .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDefaultMarker((style.item as MarkerStyle), applicationContext))))
+                            itemList.add(KmlPlacemark(currentMarker!!, getString(R.string.my_locatoin), null, style.id, arrayListOf(myLocation), KmlPlacemark.TYPE_POINT))
                         }
                         else {
                             currentMarker!!.position = myLocation
@@ -206,7 +216,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             try {
-                if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList)
+                if(kmlManager.checkStorageState()) kmlManager.saveKmlToExternal(itemList, itemStyleList)
             }
             catch (e: UninitializedPropertyAccessException) {
                 Log.i(applicationContext.packageName, "kmlManager not initialized.")
@@ -274,6 +284,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             if(kmlManager.loadKmlFromExternal()) {
                 itemList.addAll(kmlManager.itemList)
+                itemStyleList.addAll(kmlManager.itemStyleList)
                 lineDistanceList = kmlManager.lineDistanceList
                 polygonAreaList = kmlManager.polygonAreaList
 
@@ -350,11 +361,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     }
 
     override fun onMapLongClick(point: LatLng) {
+
+        val id = "${KmlPlacemark.TYPE_POINT}-" + Utils.getRandomId()
+        itemStyleList.add(StyleItem(id, MarkerStyle(id = id, color = ContextCompat.getColor(applicationContext, R.color.colorPrimary), scale = DEFAULT_MARKER_SCALE, icon = "images/ic_marker.png")))
         val marker = mMap.addMarker(MarkerOptions()
                 .draggable(true)
                 .position(point)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
-        itemList.add(KmlPlacemark(marker, getString(R.string.marker_name) + " ${markerIndex++}", null, null, arrayListOf(point), KmlPlacemark.TYPE_POINT))
+                .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDefaultMarker((itemStyleList.single{ id == it.id }.item as MarkerStyle), applicationContext))))
+        itemList.add(KmlPlacemark(marker, getString(R.string.marker_name) + " ${markerIndex++}", null, id, arrayListOf(point), KmlPlacemark.TYPE_POINT))
         drawerListAdapter.notifyDataSetChanged()
     }
 
@@ -364,6 +378,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
         when {
             isDeleteMode -> {
+                // Delete line or polygon by click info marker
                 if(marker.title == TAG_DISTANCE || marker.title == TAG_AREA) {
                     val iterator = itemList.iterator()
                     while(iterator.hasNext()) {
@@ -376,6 +391,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                                         it.remove()
                                         lineDistanceList.remove(it)
                                     }
+                                    itemStyleList.removeAll { it.id == kmlItem.styleUrl }
                                     item.remove()
                                     iterator.remove()
                                 }
@@ -386,6 +402,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                                         it.remove()
                                         polygonAreaList.remove(it)
                                     }
+                                    itemStyleList.removeAll { it.id == kmlItem.styleUrl }
                                     item.remove()
                                     iterator.remove()
                                 }
@@ -401,7 +418,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     disableMyLocation()
                 }
                 itemList.filter { it.item == marker }.map {
-                    (it.item as Marker).remove()
+                    val item = it
+                    itemStyleList.removeAll { it.id == item.styleUrl }
+                    (item.item as Marker).remove()
                 }
                 itemList.remove(itemList.single { it.item == marker })
                 if(selectedItem == marker && !isInfoViewCollapsed) collapseInfoView()
@@ -419,15 +438,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                     isLinkMode = false
                     updateLinkButtonState()
                 }
+                // Polyline
                 if(marker.position != previousLatLng) {
                     var list = ArrayList<LatLng>()
                     if(tempLine == null) {
+                        val styleItem = Utils.getDefaultLineStyle(applicationContext)
+                        val style = styleItem.item as LineStyle
+                        itemStyleList.add(styleItem)
                         tempLine = mMap.addPolyline(PolylineOptions()
+                                .color(style.color)
+                                .width(style.width.toFloat())
                                 .clickable(true)
-                                .color(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
                                 .add(startLatLng)
                                 .add((selectedItem as Marker).position))
-                        itemList.add(KmlPlacemark(tempLine!!, getString(R.string.line_name) + " ${lineIndex++}", null, null, tempLine!!.points, KmlPlacemark.TYPE_LINE))
+                        itemList.add(KmlPlacemark(tempLine!!, getString(R.string.line_name) + " ${lineIndex++}", null, styleItem.id, tempLine!!.points, KmlPlacemark.TYPE_LINE))
                     }
                     else {
                         list = ArrayList(tempLine!!.points)
@@ -447,12 +471,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
                     // Polygon
                     if (marker.position == startLatLng) {
+                        val styleItem = Utils.getDefaultPolygonStyle(applicationContext)
+                        val style = styleItem.item as PolygonStyle
+                        itemStyleList.add(styleItem)
                         val name = getString(R.string.polygon_name) + " ${polygonIndex++}"
                         val polygon = mMap.addPolygon(PolygonOptions()
-                                .fillColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary30))
+                                .fillColor(style.fillColor)
+                                .strokeColor(style.color)
+                                .strokeWidth(style.width.toFloat())
                                 .clickable(true)
                                 .addAll(list))
-                        itemList.add(KmlPlacemark(polygon, name, null, null, list, KmlPlacemark.TYPE_POLYGON))
+                        itemList.add(KmlPlacemark(polygon, name, null, styleItem.id, list, KmlPlacemark.TYPE_POLYGON))
                         setAddressName(name)
                         selectedItem = polygon
 
@@ -464,10 +493,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         areaMarker.isVisible = isShowAreaEnabled
                         polygonAreaList.add(areaMarker)
 
+                        // Remove markers and line
                         for (point in list) {
                             itemList.filter { it.item is Marker }.filter { point == (it.item as Marker).position }.map {
-                                (it.item as Marker).remove()
-                                if(it.item == currentMarker) currentMarker = null
+                                val item = it
+                                itemStyleList.removeAll { it.id == item.styleUrl}
+                                (item.item as Marker).remove()
+                                if(item.item == currentMarker) currentMarker = null
                                 itemList.remove(it)
                             }
                         }
@@ -476,7 +508,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                             lineDistanceList.remove(it)
                         }
                         tempLine!!.remove()
-                        itemList.remove(itemList.single { it.item == tempLine })
+                        itemList.filter { it.item == tempLine }.map {
+                            val item = it
+                            itemStyleList.removeAll { it.id == item.styleUrl }
+                            itemList.remove(it)
+                        }
 
                         isLinkMode = false
                         updateLinkButtonState()
@@ -532,11 +568,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
             if(isDeleteMode) {
                 itemList.filter { it.item == polyline }.map {
+                    val item = it
                     val kmlItem = it.item as Polyline
                     lineDistanceList.filter { kmlItem.id == it.tag }.map {
                         it.remove()
                         lineDistanceList.remove(it)
                     }
+                    itemStyleList.removeAll { it.id == item.styleUrl }
                     kmlItem.remove()
                     itemList.remove(itemList.single { it.item == polyline })
                 }
@@ -560,11 +598,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
 
             if(isDeleteMode) {
                 itemList.filter { it.item == polygon }.map {
+                    val item = it
                     val kmlItem = it.item as Polygon
                     polygonAreaList.filter { kmlItem.id == it.tag }.map {
                         it.remove()
                         polygonAreaList.remove(it)
                     }
+                    itemStyleList.removeAll { it.id == item.styleUrl }
                     kmlItem.remove()
                     itemList.remove(itemList.single { it.item == polygon })
                 }
@@ -716,8 +756,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
             val name = getString(R.string.my_locatoin)
             if(currentMarker != null) currentMarker!!.position = ll
             else {
-                currentMarker = mMap.addMarker(MarkerOptions().position(ll))
-                itemList.add(KmlPlacemark(currentMarker!!, name, null, null, arrayListOf(ll), KmlPlacemark.TYPE_POINT))
+                val style = Utils.getDefaultMarkerStyle(applicationContext)
+                currentMarker = mMap.addMarker(MarkerOptions()
+                        .position(ll)
+                        .icon(BitmapDescriptorFactory.fromBitmap(Utils.getDefaultMarker((style.item as MarkerStyle), applicationContext))))
+                itemList.add(KmlPlacemark(currentMarker!!, name, null, style.id, arrayListOf(ll), KmlPlacemark.TYPE_POINT))
             }
 
             setAddressName(name)
@@ -886,13 +929,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         else address.text = getString(R.string.untitled)
     }
 
+
     companion object {
         const val PERMISSION_REQUEST_CODE_LOCATION = 1
         const val PERMISSION_REQUEST_CODE_STORAGE = 2
         const val DEFAULT_CAMERA_ZOOM = 15.0f
+        const val DEFAULT_LINE_WIDTH = 10
         const val MAX_CAMERA_ZOOM = 10.0f
         const val ADDRESS_ANIM_DURATION: Long = 1000
         const val MENU_EXPAND_DURATION: Long = 250
+        const val DEFAULT_MARKER_SCALE = 1.3
         const val TAG_DISTANCE = "DISTANCE"
         const val TAG_AREA = "AREA"
     }

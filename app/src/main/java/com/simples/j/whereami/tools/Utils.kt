@@ -1,22 +1,33 @@
 package com.simples.j.whereami.tools
 
 import android.content.Context
-import android.graphics.Bitmap
+import android.graphics.*
 import android.preference.PreferenceManager
-import android.util.Log
+import android.support.v4.content.ContextCompat
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.ui.IconGenerator
+import com.simples.j.whereami.MapActivity
 import com.simples.j.whereami.R
+import com.simples.j.whereami.style.LineStyle
+import com.simples.j.whereami.style.MarkerStyle
+import com.simples.j.whereami.style.PolygonStyle
+import com.simples.j.whereami.style.StyleItem
+import java.util.*
 
 /**
  * Created by j on 24/01/2018.
  *
  */
-class Utils() {
+class Utils {
 
     companion object {
+
+        fun getRandomId(): Int {
+            return 100000 + Random().nextInt(899999)
+        }
+
         fun getPointsBound(points: List<LatLng>): LatLngBounds {
             val bounds = LatLngBounds.builder()
             for(item in points) {
@@ -64,6 +75,33 @@ class Utils() {
 
         fun getDisplayResolution(context: Context): Array<Int> {
             return arrayOf(context.resources.displayMetrics.widthPixels, context.resources.displayMetrics.heightPixels)
+        }
+
+        fun getDefaultMarker(style: MarkerStyle, context: Context): Bitmap {
+            var original = BitmapFactory.decodeResource(context.resources, R.drawable.ic_marker)
+            original = Bitmap.createScaledBitmap(original, (original.width * style.scale).toInt(), (original.height * style.scale).toInt(), true)
+            val icon = Bitmap.createBitmap(original.width, original.height, original.config)
+            val paint = Paint()
+            paint.colorFilter = PorterDuffColorFilter(style.color, PorterDuff.Mode.SRC_ATOP)
+            val canvas = Canvas(icon)
+            canvas.drawBitmap(original, 0f, 0f, paint)
+
+            return icon
+        }
+
+        fun getDefaultMarkerStyle(context: Context): StyleItem {
+            val id = "${KmlPlacemark.TYPE_POINT}-" + Utils.getRandomId()
+            return StyleItem(id, MarkerStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), scale = MapActivity.DEFAULT_MARKER_SCALE, icon = "images/ic_marker.png"))
+        }
+
+        fun getDefaultLineStyle(context: Context): StyleItem {
+            val id = "${KmlPlacemark.TYPE_LINE}-" + Utils.getRandomId()
+            return StyleItem(id, LineStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), width = MapActivity.DEFAULT_LINE_WIDTH))
+        }
+
+        fun getDefaultPolygonStyle(context: Context): StyleItem {
+            val id = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId()
+            return StyleItem(id, PolygonStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), fill = 1, fillColor = ContextCompat.getColor(context, R.color.colorPrimary30), width = MapActivity.DEFAULT_LINE_WIDTH))
         }
 
         const val MEASURE_INCH = "1"
