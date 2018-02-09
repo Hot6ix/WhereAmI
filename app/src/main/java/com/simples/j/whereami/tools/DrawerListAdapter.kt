@@ -11,6 +11,10 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.Polyline
 import com.simples.j.whereami.R
+import com.simples.j.whereami.style.LineStyle
+import com.simples.j.whereami.style.MarkerStyle
+import com.simples.j.whereami.style.PolygonStyle
+import com.simples.j.whereami.style.StyleItem
 import kotlinx.android.synthetic.main.drawer_header.view.*
 import kotlinx.android.synthetic.main.drawer_list_item.view.*
 
@@ -19,7 +23,7 @@ import kotlinx.android.synthetic.main.drawer_list_item.view.*
  *
  */
 
-class DrawerListAdapter(private val list: ArrayList<KmlPlacemark>, private val context: Context): RecyclerView.Adapter<DrawerListAdapter.ViewHolder>() {
+class DrawerListAdapter(private val itemList: ArrayList<KmlPlacemark>, private val styleList: ArrayList<StyleItem>, private val context: Context): RecyclerView.Adapter<DrawerListAdapter.ViewHolder>() {
 
     private lateinit var drawerItemClickListener: OnItemClickListener
 
@@ -43,33 +47,42 @@ class DrawerListAdapter(private val list: ArrayList<KmlPlacemark>, private val c
         }
     }
 
-    override fun getItemCount(): Int { return list.size + 1 }
+    override fun getItemCount(): Int { return itemList.size + 1 }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
 
         when(holder.type) {
-            TYPE_HEADER -> {
-            }
             TYPE_CONTENT -> {
-                val item = list[position - 1]
+                val item = itemList[position - 1]
 
-                when(item.item) {
-                    is Marker -> {
-                        holder.itemName?.text = item.name
-                        holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_action_markers))
+                try {
+                    val style = styleList.single { it.id == item.styleUrl?.removePrefix("#") }
+
+                    holder.itemName?.text = item.name
+                    when(item.item) {
+                        is Marker -> {
+                            val styleItem = style.item as MarkerStyle
+                            holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_marker_light))
+                            holder.itemIcon?.setColorFilter(styleItem.color)
+                        }
+                        is Polyline -> {
+                            val styleItem = style.item as LineStyle
+                            holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_line_light))
+                            holder.itemIcon?.setColorFilter(styleItem.color)
+                        }
+                        is Polygon -> {
+                            val styleItem = style.item as PolygonStyle
+                            holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_polygon_light))
+                            holder.itemIcon?.setColorFilter(styleItem.color)
+                        }
                     }
-                    is Polyline -> {
-                        holder.itemName?.text = item.name
-                        holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_line))
-                    }
-                    is Polygon -> {
-                        holder.itemName?.text = item.name
-                        holder.itemIcon?.setImageDrawable(context.getDrawable(R.drawable.ic_polygon))
+
+                    holder.itemView.setOnClickListener {
+                        drawerItemClickListener.onDrawerItemClick(itemList[position - 1].item, holder.itemView)
                     }
                 }
-
-                holder.itemView.setOnClickListener {
-                    drawerItemClickListener.onDrawerItemClick(list[position - 1].item, holder.itemView)
+                catch (e: NoSuchElementException) {
+                    e.printStackTrace()
                 }
             }
         }
@@ -82,7 +95,7 @@ class DrawerListAdapter(private val list: ArrayList<KmlPlacemark>, private val c
     inner class ViewHolder(view: View, viewType: Int): RecyclerView.ViewHolder(view) {
         var itemName: TextView? = null
         var itemIcon: ImageView? = null
-        var headerTitle: TextView? = null
+        private var headerTitle: TextView? = null
         var type: Int = 999
 
         init {

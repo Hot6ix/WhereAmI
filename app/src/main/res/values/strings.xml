@@ -10,6 +10,10 @@
     <string name="item_list_title">Items</string>
     <string name="detail_name_title">Name</string>
     <string name="detail_description_title">Description</string>
+    <string name="detail_color_title">Color</string>
+    <string name="detail_transparency_title">Transparency</string>
+    <string name="detail_thickness_title">Thickness</string>
+    <string name="detail_thickness_polygon_title">Edge thickness</string>
     <string name="detail_save_title">Save</string>
     <string name="short_points_format">%1$.7f, %2$.7f</string>
     <string name="untitled">Untitled</string>
@@ -19,6 +23,12 @@
     <string name="my_locatoin">My location</string>
     <string name="pyong">pyong</string>
     <string name="open_folder">Open with &#8230;</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+    <string name="clear_all">Remove all</string>
+    <string name="clear_all_title">Confirmation</string>
+    <string name="clear_all_message">Are you sure you want to delete all items?</string>
+    <string name="clear_all_toast">All items have been removed.</string>
 
     <!-- Toast message -->
     <string name="delete_mode_message">Select item to remove.</string>
@@ -77,6 +87,9 @@
         <item>3</item>
         <item>4</item>
     </string-array>
+
+    <string name="pref_clear_all_id">CLEAR</string>
+    <string name="pref_clear_all">Clear all items</string>
 
     <!-- etc -->
 

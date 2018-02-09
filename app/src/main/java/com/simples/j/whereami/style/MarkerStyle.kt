@@ -1,5 +1,7 @@
 package com.simples.j.whereami.style
 
+import java.io.Serializable
+
 /**
  * Created by j on 05/02/2018.
  *
@@ -10,4 +12,4 @@ data class MarkerStyle(
         override var colorMode: String = "normal",
         var scale: Double,
         var icon: String
-): ItemStyle()
+): ItemStyle(), Serializable

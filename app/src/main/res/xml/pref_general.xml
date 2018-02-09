@@ -27,6 +27,10 @@
             android:entries="@array/pref_area_action_entries"
             android:entryValues="@array/pref_area_action_values" />
 
+        <Preference
+            android:key="@string/pref_clear_all_id"
+            android:title="@string/pref_clear_all"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory

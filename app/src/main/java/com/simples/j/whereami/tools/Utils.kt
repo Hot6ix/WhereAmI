@@ -1,5 +1,6 @@
 package com.simples.j.whereami.tools
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.*
 import android.preference.PreferenceManager
@@ -89,18 +90,15 @@ class Utils {
             return icon
         }
 
-        fun getDefaultMarkerStyle(context: Context): StyleItem {
-            val id = "${KmlPlacemark.TYPE_POINT}-" + Utils.getRandomId()
+        fun getDefaultMarkerStyle(context: Context, id: String = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId()): StyleItem {
             return StyleItem(id, MarkerStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), scale = MapActivity.DEFAULT_MARKER_SCALE, icon = "images/ic_marker.png"))
         }
 
-        fun getDefaultLineStyle(context: Context): StyleItem {
-            val id = "${KmlPlacemark.TYPE_LINE}-" + Utils.getRandomId()
+        fun getDefaultLineStyle(context: Context, id: String = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId()): StyleItem {
             return StyleItem(id, LineStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), width = MapActivity.DEFAULT_LINE_WIDTH))
         }
 
-        fun getDefaultPolygonStyle(context: Context): StyleItem {
-            val id = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId()
+        fun getDefaultPolygonStyle(context: Context, id: String = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId()): StyleItem {
             return StyleItem(id, PolygonStyle(id, ContextCompat.getColor(context, R.color.colorPrimary), fill = 1, fillColor = ContextCompat.getColor(context, R.color.colorPrimary30), width = MapActivity.DEFAULT_LINE_WIDTH))
         }
 
@@ -112,5 +110,6 @@ class Utils {
         const val MEASURE_ACRE = "2"
         const val MEASURE_ARE = "3"
         const val MEASURE_PYONG = "4"
+        const val DEFAULT_TRANSPARENCY = 30
     }
 }

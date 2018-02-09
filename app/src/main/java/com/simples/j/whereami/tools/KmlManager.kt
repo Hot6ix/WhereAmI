@@ -2,7 +2,6 @@ package com.simples.j.whereami.tools
 
 import android.content.Context
 import android.os.Environment
-import android.util.Log
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
 import com.simples.j.whereami.MapActivity
@@ -68,7 +67,12 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
             when(item.type) {
                 KmlPlacemark.TYPE_POINT -> {
                     if(styleItem == null) {
-                        styleItem = Utils.getDefaultMarkerStyle(context)
+                        // Item does not have id
+                        if(item.styleUrl?.removePrefix("#").isNullOrBlank()) { item.styleUrl = "${KmlPlacemark.TYPE_POINT}-" + Utils.getRandomId() }
+
+                        styleItem =
+                                if(item.styleUrl != null) Utils.getDefaultMarkerStyle(context, item.styleUrl!!.removePrefix("#")) // Item has id but no style
+                                else Utils.getDefaultMarkerStyle(context) // Item does not have id and style
                         itemStyleList.add(styleItem)
                     }
                     val style = styleItem.item as MarkerStyle
@@ -80,7 +84,12 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                 }
                 KmlPlacemark.TYPE_LINE -> {
                     if(styleItem == null) {
-                        styleItem = Utils.getDefaultLineStyle(context)
+                        // Item does not have id
+                        if(item.styleUrl?.removePrefix("#").isNullOrBlank()) { item.styleUrl = "${KmlPlacemark.TYPE_LINE}-" + Utils.getRandomId() }
+
+                        styleItem =
+                                if(item.styleUrl != null) Utils.getDefaultPolygonStyle(context, item.styleUrl!!.removePrefix("#")) // Item has id but no style
+                                else Utils.getDefaultLineStyle(context) // Item does not have id and style
                         itemStyleList.add(styleItem)
                     }
                     val style = styleItem.item as LineStyle
@@ -105,7 +114,12 @@ class KmlManager(private var context: Context, private var googleMap: GoogleMap)
                 }
                 KmlPlacemark.TYPE_POLYGON -> {
                     if(styleItem == null) {
-                        styleItem = Utils.getDefaultPolygonStyle(context)
+                        // Item has id but empty
+                        if(item.styleUrl?.removePrefix("#").isNullOrBlank()) { item.styleUrl = "${KmlPlacemark.TYPE_POLYGON}-" + Utils.getRandomId() }
+
+                        styleItem =
+                                if(item.styleUrl != null) Utils.getDefaultPolygonStyle(context, item.styleUrl!!.removePrefix("#")) // Item has id but no style
+                                else Utils.getDefaultPolygonStyle(context) // Item does not have id and style
                         itemStyleList.add(styleItem)
                     }
                     val style = styleItem.item as PolygonStyle

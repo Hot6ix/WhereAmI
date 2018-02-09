@@ -1,7 +1,6 @@
 package com.simples.j.whereami.tools
 
 import android.graphics.Color
-import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import com.simples.j.whereami.style.LineStyle
 import com.simples.j.whereami.style.MarkerStyle
@@ -10,9 +9,7 @@ import com.simples.j.whereami.style.StyleItem
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
 import java.io.InputStream
-import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.collections.ArrayList
 
 /**
  * Created by james on 2018-01-22.

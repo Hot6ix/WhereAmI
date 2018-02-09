@@ -1,5 +1,7 @@
 package com.simples.j.whereami.style
 
+import java.io.Serializable
+
 /**
  * Created by j on 05/02/2018.
  *
@@ -11,4 +13,4 @@ data class PolygonStyle(
         var width: Int,
         var fill: Int,
         var fillColor: Int
-): ItemStyle()
+): ItemStyle(), Serializable

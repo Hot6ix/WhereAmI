@@ -34,75 +34,79 @@ class KmlSerializer(private var items: ArrayList<KmlPlacemark>, private var styl
         serializer.text("")
         serializer.endTag(null, "description")
         // Begin styles
-        for(item in styles) {
-            val styleItem = item.item
-            serializer.startTag(null, "Style")
-            serializer.attribute(null, "id", item.id)
-            when(styleItem) {
-                is MarkerStyle -> {
-                    serializer.startTag(null, "IconStyle")
-                    // Color
-                    serializer.startTag(null, "color")
-                    serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
-                    serializer.endTag(null, "color")
-                    // ColorMode
-                    serializer.startTag(null, "colorMode")
-                    serializer.text(styleItem.colorMode)
-                    serializer.endTag(null, "colorMode")
-                    // Scale
-                    serializer.startTag(null, "scale")
-                    serializer.text(styleItem.scale.toString())
-                    serializer.endTag(null, "scale")
-                    // Icon
-                    serializer.startTag(null, "Icon")
-                    serializer.startTag(null, "href")
-                    serializer.text(styleItem.icon)
-                    serializer.endTag(null, "href")
-                    serializer.endTag(null, "Icon")
-                    serializer.endTag(null, "IconStyle")
+        styles.map {
+            val styleItem = it.item
+            val id = it.id
+            // Do not serialize unlinked style
+            if(items.singleOrNull { id == it.styleUrl?.removePrefix("#") } != null) {
+                serializer.startTag(null, "Style")
+                serializer.attribute(null, "id", it.id)
+                when(styleItem) {
+                    is MarkerStyle -> {
+                        serializer.startTag(null, "IconStyle")
+                        // Color
+                        serializer.startTag(null, "color")
+                        serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
+                        serializer.endTag(null, "color")
+                        // ColorMode
+                        serializer.startTag(null, "colorMode")
+                        serializer.text(styleItem.colorMode)
+                        serializer.endTag(null, "colorMode")
+                        // Scale
+                        serializer.startTag(null, "scale")
+                        serializer.text(styleItem.scale.toString())
+                        serializer.endTag(null, "scale")
+                        // Icon
+                        serializer.startTag(null, "Icon")
+                        serializer.startTag(null, "href")
+                        serializer.text(styleItem.icon)
+                        serializer.endTag(null, "href")
+                        serializer.endTag(null, "Icon")
+                        serializer.endTag(null, "IconStyle")
+                    }
+                    is LineStyle -> {
+                        serializer.startTag(null, "LineStyle")
+                        // Color
+                        serializer.startTag(null, "color")
+                        serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
+                        serializer.endTag(null, "color")
+                        // ColorMode
+                        serializer.startTag(null, "colorMode")
+                        serializer.text(styleItem.colorMode)
+                        serializer.endTag(null, "colorMode")
+                        // Width
+                        serializer.startTag(null, "width")
+                        serializer.text(styleItem.width.toString())
+                        serializer.endTag(null, "width")
+                        serializer.endTag(null, "LineStyle")
+                    }
+                    is PolygonStyle -> {
+                        // Line
+                        serializer.startTag(null, "LineStyle")
+                        // Color
+                        serializer.startTag(null, "color")
+                        serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
+                        serializer.endTag(null, "color")
+                        // Width
+                        serializer.startTag(null, "width")
+                        serializer.text(styleItem.width.toString())
+                        serializer.endTag(null, "width")
+                        serializer.endTag(null, "LineStyle")
+                        // Polygon
+                        serializer.startTag(null, "PolyStyle")
+                        // Color
+                        serializer.startTag(null, "color")
+                        serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.fillColor.toLong())))
+                        serializer.endTag(null, "color")
+                        // Fill
+                        serializer.startTag(null, "fill")
+                        serializer.text(styleItem.fill.toString())
+                        serializer.endTag(null, "fill")
+                        serializer.endTag(null, "PolyStyle")
+                    }
                 }
-                is LineStyle -> {
-                    serializer.startTag(null, "LineStyle")
-                    // Color
-                    serializer.startTag(null, "color")
-                    serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
-                    serializer.endTag(null, "color")
-                    // ColorMode
-                    serializer.startTag(null, "colorMode")
-                    serializer.text(styleItem.colorMode)
-                    serializer.endTag(null, "colorMode")
-                    // Width
-                    serializer.startTag(null, "width")
-                    serializer.text(styleItem.width.toString())
-                    serializer.endTag(null, "width")
-                    serializer.endTag(null, "LineStyle")
-                }
-                is PolygonStyle -> {
-                    // Line
-                    serializer.startTag(null, "LineStyle")
-                    // Color
-                    serializer.startTag(null, "color")
-                    serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.color.toLong())))
-                    serializer.endTag(null, "color")
-                    // Width
-                    serializer.startTag(null, "width")
-                    serializer.text(styleItem.width.toString())
-                    serializer.endTag(null, "width")
-                    serializer.endTag(null, "LineStyle")
-                    // Polygon
-                    serializer.startTag(null, "PolyStyle")
-                    // Color
-                    serializer.startTag(null, "color")
-                    serializer.text(String.format("#%08X", (0xFFFFFFFF and styleItem.fillColor.toLong())))
-                    serializer.endTag(null, "color")
-                    // Fill
-                    serializer.startTag(null, "fill")
-                    serializer.text(styleItem.fill.toString())
-                    serializer.endTag(null, "fill")
-                    serializer.endTag(null, "PolyStyle")
-                }
+                serializer.endTag(null, "Style")
             }
-            serializer.endTag(null, "Style")
         }
         // Begin contents
         serializer.startTag(null, "Folder")
@@ -110,26 +114,26 @@ class KmlSerializer(private var items: ArrayList<KmlPlacemark>, private var styl
         serializer.text("")
         serializer.endTag(null, "name")
         // Objects
-        for(item in items) {
-            val kmlItem = item.item
+        items.map {
+            val kmlItem = it.item
             serializer.startTag(null, "Placemark")
             // Name
             serializer.startTag(null, "name")
-            serializer.text(item.name)
+            serializer.text(it.name)
             serializer.endTag(null, "name")
             // Style
             serializer.startTag(null, "styleUrl")
-            val styleId = item.styleUrl
+            val styleId = it.styleUrl
             if(styleId != null && styleId.startsWith("#"))
                 serializer.text(styleId)
             else
                 serializer.text("#" + styleId)
             serializer.endTag(null, "styleUrl")
             // Description
-            val description = item.description
+            val description = it.description
             if(description != null && description.isNotEmpty()) {
                 serializer.startTag(null, "description")
-                serializer.text(item.description)
+                serializer.text(it.description)
                 serializer.endTag(null, "description")
             }
             when(kmlItem) {

@@ -1,7 +1,10 @@
 package com.simples.j.whereami
 
 import android.annotation.TargetApi
+import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
@@ -9,8 +12,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.preference.*
-import android.support.v4.content.ContextCompat
+import android.util.Log
 import android.view.MenuItem
+import android.widget.Toast
 import java.io.File
 
 /**
@@ -68,7 +72,31 @@ class SettingsActivity : AppCompatPreferenceActivity() {
 
             val pName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
 
-            findPreference(resources.getString(R.string.pref_version_id)).summary = pName
+            val version = findPreference(resources.getString(R.string.pref_version_id))
+            version.summary = pName
+            version.setOnPreferenceClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${activity.packageName}")))
+                }
+                catch (e: ActivityNotFoundException) {
+                    Log.i(activity.packageName, "Unable to go to play store.")
+                }
+                true
+            }
+
+            val clearAll = findPreference(resources.getString(R.string.pref_clear_all_id)).setOnPreferenceClickListener {
+                val dialog = AlertDialog.Builder(activity)
+                        .setTitle(resources.getString(R.string.clear_all_title))
+                        .setMessage(resources.getString(R.string.clear_all_message))
+                        .setPositiveButton(resources.getString(R.string.confirm), { _, _ ->
+                            Toast.makeText(activity, resources.getString(R.string.clear_all_toast), Toast.LENGTH_SHORT).show()
+                            activity.setResult(MapActivity.REQUEST_CLEAR_ALL)
+                        })
+                        .setNegativeButton(resources.getString(R.string.cancel), { _, _ -> })
+                dialog.create().show()
+                true
+            }
+
             val locationPath = findPreference(resources.getString(R.string.pref_location_id))
             locationPath.summary = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), activity.getString(R.string.save_file_name)).path
             locationPath.setOnPreferenceClickListener {
@@ -80,11 +108,13 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 }
                 true
             }
+
             findPreference(resources.getString(R.string.pref_github_id)).setOnPreferenceClickListener {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resources.getString(R.string.github_url)))
                 startActivity(intent)
                 true
             }
+
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_distance_action_id)))
             bindPreferenceSummaryToValue(findPreference(resources.getString(R.string.pref_area_action_id)))
 //            findPreference(resources.getString(R.string.pref_tracking_id)).onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, value ->
@@ -116,6 +146,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                             .getDefaultSharedPreferences(preference.context)
                             .getString(preference.key, ""))
         }
+
     }
 
     companion object {
