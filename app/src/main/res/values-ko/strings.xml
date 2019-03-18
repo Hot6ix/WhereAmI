@@ -44,7 +44,7 @@
 
     <!-- Show Distance -->
     <string name="pref_show_distance_id">SHOW_DISTANCE</string>
-    <string name="pref_show_distance_title">두 좌표 간 거리 표시</string>
+    <string name="pref_show_distance_title">선 거리 표시</string>
 
     <string name="pref_distance_action_title">거리 단위</string>
     <string name="pref_distance_action_list_title">거리 단위</string>
@@ -94,11 +94,13 @@
     <!-- etc -->
 
     <string name="save_file_name">footprint.kml</string>
-    <string name="pref_version_title">Version</string>
+    <string name="pref_version_title">버전</string>
     <string name="pref_version_id">VERSION</string>
-    <string name="pref_github_title">Open source - GitHub</string>
+    <string name="pref_github_title">오픈 소스 - GitHub</string>
     <string name="pref_github_id">GITHUB</string>
-    <string name="pref_location_title">File location</string>
+    <string name="pref_privacy_policy_title">개인정보취급방침</string>
+    <string name="pref_privacy_policy_id">PRIVACY</string>
+    <string name="pref_location_title">파일 위치</string>
     <string name="pref_location_id">FILE</string>
 
     <string name="title_activity_main">MainActivity</string>

@@ -44,7 +44,7 @@
 
     <!-- Show Distance -->
     <string name="pref_show_distance_id">SHOW_DISTANCE</string>
-    <string name="pref_show_distance_title">Show distance between two point</string>
+    <string name="pref_show_distance_title">Show line distance</string>
 
     <string name="pref_distance_action_title">Select distance measure</string>
     <string name="pref_distance_action_list_title">Select measure</string>
@@ -92,12 +92,13 @@
     <string name="pref_clear_all">Clear all items</string>
 
     <!-- etc -->
-
     <string name="save_file_name">footprint.kml</string>
     <string name="pref_version_title">Version</string>
     <string name="pref_version_id">VERSION</string>
     <string name="pref_github_title">Open source - GitHub</string>
     <string name="pref_github_id">GITHUB</string>
+    <string name="pref_privacy_policy_title">Privacy Policy</string>
+    <string name="pref_privacy_policy_id">PRIVACY</string>
     <string name="pref_location_title">File location</string>
     <string name="pref_location_id">FILE</string>
 
